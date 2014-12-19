@@ -1,12 +1,13 @@
 import Signal (..)
+import Time (..)
 import Graphics.Element (..)
 import Graphics.Collage (..)
+import List
 import Text
 import Color
 import Window
 import Keyboard
 import Mouse
-import Time
 
 type alias Game =
   { player : Player
@@ -19,13 +20,32 @@ type alias Object a =
   }
 
 type alias Player = Object
-  {
+  { velocity : Float
+  , angle    : Float
+  }
+
+type Update = Delay Time
+
+updates : Signal Update
+updates = Delay <~ fps 35
+
+step : Update -> Game -> Game
+step update ({player} as game) = case update of
+  Delay dt ->
+    let (dx, dy) = fromPolar (player.velocity, player.angle)
+        player'  = { player
+                   | x <- player.x + dx * dt
+                   , y <- player.y + dy * dt
+                   }
+    in { game | player <- player' }
+
+defaultGame : Game
+defaultGame =
+  { player = { x = 0, y = 0, velocity = 100 / second, angle = 0 }
   }
 
 game : Signal Game
-game = constant
-  { player = { x = 0, y = 0 }
-  }
+game = foldp step defaultGame updates
 
 display : (Int, Int) -> Game -> Element
 display (w, h) {player} =
@@ -37,11 +57,18 @@ display (w, h) {player} =
                |> Text.height 22
                |> Text.color Color.white
                |> Text.leftAligned
+      camera =
+        { x = player.x
+        , y = player.y
+        }
   in
     layers
-      [ collage w h
-          [ rect (toFloat w) (toFloat h) |> filled Color.black
-          , circle 10 |> filled Color.white |> move (player.x, player.y)
+      [ spacer w h |> color Color.black
+      , collage w h <| List.map (move (-camera.x, -camera.y))
+          [ circle 10 |> filled Color.white |> move (player.x, player.y)
+          , circle 3 |> filled Color.red
+            |> move (player.x, player.y)
+            |> move (fromPolar (7, player.angle))
           , circle 3 |> filled Color.red |> move (0, 0)
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10)) (text "Zzz")
