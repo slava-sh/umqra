@@ -44,7 +44,7 @@ dAngle : Float
 dAngle = pi / second
 
 newDotProbability : Float
-newDotProbability = 1 / 3 / toFloat gameFPS
+newDotProbability = 1 / 2 / toFloat gameFPS
 
 playerRadius : Float
 playerRadius = 4
@@ -124,8 +124,8 @@ randomElement arr seed =
 
 generateDot : Random.Seed -> (Dot, Random.Seed)
 generateDot seed =
-  let (x, seed')         = Random.generate (Random.float -200 200) seed
-      (y, seed'')        = Random.generate (Random.float -200 200) seed'
+  let (x, seed')         = Random.generate (Random.float -600 600) seed
+      (y, seed'')        = Random.generate (Random.float -300 300) seed'
       (color, seed''')   = randomElement dotColors seed''
       (maxAge, seed'''') = Random.generate (Random.int 1 maxDotAge) seed'''
       dot = { x      = x
@@ -154,32 +154,36 @@ step update ({player, dots, seed} as game) = case update of
                   |> List.map updateAge
                   |> List.filter (\dot -> dot.age <= dot.maxAge)
     in { game | player <- player', dots <- dots' }
-  Delay dt ->
-    let velocity' = player.velocity + player.dVelocity * dt
-                    |> clamp minPlayerVelocity maxPlayerVelocity
-        angle'    = player.angle + player.dAngle * dt
-        (dx, dy)  = fromPolar (velocity', angle')
-        player'   = { player
-                    | x        <- player.x + dx * dt
-                    , y        <- player.y + dy * dt
-                    , velocity <- velocity'
-                    , angle    <- angle'
-                    }
-        (newDot, seed') = withProbability newDotProbability generateDot seed
-        dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
-        relativeToPlayer obj =
-          { obj
-          | x <- player.x + obj.x
-          , y <- player.y + obj.y
-          }
-    in
-      { game
-      | player <- player'
-      , dots   <- dots'
-      , seed   <- seed'
-      , time   <- game.time + dt
-      }
-      |> eatDots
+  Delay dt -> game
+              |> eatDots
+              |> updatePhysics' dt
+
+updatePhysics' : Time -> Game -> Game
+updatePhysics' dt ({player, dots, seed} as game) =
+  let velocity' = player.velocity + player.dVelocity * dt
+                  |> clamp minPlayerVelocity maxPlayerVelocity
+      angle'    = player.angle + player.dAngle * dt
+      (dx, dy)  = fromPolar (velocity', angle')
+      player'   = { player
+                  | x        <- player.x + dx * dt
+                  , y        <- player.y + dy * dt
+                  , velocity <- velocity'
+                  , angle    <- angle'
+                  }
+      (newDot, seed') = withProbability newDotProbability generateDot seed
+      dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
+      relativeToPlayer obj =
+        { obj
+        | x <- player.x + obj.x
+        , y <- player.y + obj.y
+        }
+  in
+    { game
+    | player <- player'
+    , dots   <- dots'
+    , seed   <- seed'
+    , time   <- game.time + dt
+    }
 
 distanceSquare : Object a -> Object b -> Float
 distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
