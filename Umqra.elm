@@ -56,12 +56,12 @@ step update ({player} as game) = case update of
 
 defaultGame : Game
 defaultGame =
-  { player = { x = 0
-             , y = 0
-             , velocity = 100 / second
+  { player = { x         = 0
+             , y         = 0
+             , velocity  = 5 / second
              , dVelocity = 0
-             , angle = 0
-             , dAngle = 0
+             , angle     = 0
+             , dAngle    = 0
              }
   }
 
@@ -92,9 +92,9 @@ display (w, h) {player} =
             |> move (fromPolar (7, player.angle))
           , circle 3 |> filled Color.red |> move (0, 0)
           ]
-      , container w h (topLeftAt (absolute 10) (absolute 10)) (text "Zzz")
-      , container w h (midTopAt (relative 0.5) (absolute 10)) (text "Hmm")
-      , container w h (topRightAt (absolute 10) (absolute 10)) (text "Arr")
+      , container w h (topLeftAt (absolute 10) (absolute 10))  <| text "Zzz"
+      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Hmm"
+      , container w h (topRightAt (absolute 10) (absolute 10)) <| text "Arr"
       ]
 
 main : Signal Element
