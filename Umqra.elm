@@ -32,6 +32,12 @@ trailFPS = 5
 newDotsExpectedPS : Float
 newDotsExpectedPS = 1
 
+newDotX : Float
+newDotX = 1000
+
+newDotY : Float
+newDotY = 600
+
 trailLength : Int
 trailLength = 20
 
@@ -138,8 +144,8 @@ randomElement arr seed =
 
 generateDot : Random.Seed -> (Dot, Random.Seed)
 generateDot seed =
-  let (x, seed')         = Random.generate (Random.float -600 600) seed
-      (y, seed'')        = Random.generate (Random.float -300 300) seed'
+  let (x, seed')         = Random.generate (Random.float -newDotX newDotX) seed
+      (y, seed'')        = Random.generate (Random.float -newDotY newDotY) seed'
       (color, seed''')   = randomElement dotColors seed''
       (maxAge, seed'''') = Random.generate (Random.int 1 maxDotAge) seed'''
       dot = { x      = x
