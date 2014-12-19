@@ -206,7 +206,7 @@ defaultPlayer : Player
 defaultPlayer =
   { x         = 0
   , y         = 0
-  , velocity  = minPlayerVelocity / second
+  , velocity  = minPlayerVelocity
   , dVelocity = 0
   , angle     = 0
   , dAngle    = 0
