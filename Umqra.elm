@@ -24,6 +24,7 @@ type alias Game =
   { player : Player
   , dots   : List Dot
   , seed   : Random.Seed
+  , time   : Time
   }
 
 type alias Object a =
@@ -97,7 +98,12 @@ step update ({player, dots, seed} as game) = case update of
                     }
         (newDot, seed') = withProbability newDotProbability generateDot seed
         dots'           = maybeToList newDot ++ dots
-    in { game | player <- player', dots <- dots', seed <- seed' }
+    in { game
+       | player <- player'
+       , dots   <- dots'
+       , seed   <- seed'
+       , time   <- game.time + dt
+       }
 
 defaultGame : Game
 defaultGame =
@@ -110,6 +116,7 @@ defaultGame =
              }
   , dots = [{ x = -30, y = -40, color = Color.lightBlue }]
   , seed = Random.initialSeed 499
+  , time = 0
   }
 
 dotColors : Array Color
@@ -119,7 +126,7 @@ game : Signal Game
 game = foldp step defaultGame updates
 
 display : (Int, Int) -> Game -> Element
-display (w, h) {player, dots} =
+display (w, h) ({player, dots} as game) =
   let halfW  = toFloat w / 2
       halfH  = toFloat h / 2
       text s = Text.fromString s
@@ -145,7 +152,8 @@ display (w, h) {player, dots} =
             |> move (player.x, player.y)
             |> move (fromPolar (7, player.angle))
           ]
-      , container w h (topLeftAt (absolute 10) (absolute 10))  <| text "Zzz"
+      , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
+          toString (floor <| inSeconds game.time) ++ " " ++ toString (List.length dots)
       , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Hmm"
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text "Arr"
       ]
