@@ -22,6 +22,9 @@ gameFPS = 35
 ageFPS : Float
 ageFPS = 1 / 5
 
+maxDotAge : Int
+maxDotAge = 3
+
 trailFPS : Float
 trailFPS = 5
 
@@ -29,7 +32,7 @@ trailLength : Int
 trailLength = 20
 
 newDotProbability : Float
-newDotProbability = 1 / toFloat gameFPS
+newDotProbability = 1 / 5 / toFloat gameFPS
 
 type alias Game =
   { player : Player
@@ -56,7 +59,9 @@ type alias Player = Object
   }
 
 type alias Dot = Object
-  { color : Color
+  { color  : Color
+  , age    : Int
+  , maxAge : Int
   }
 
 type Update = Input { x : Int, y : Int} | Trail | Age | Delay Time
@@ -100,14 +105,17 @@ randomElement arr seed =
 
 generateDot : Random.Seed -> (Dot, Random.Seed)
 generateDot seed =
-  let (x, seed')       = Random.generate (Random.float -500 500) seed
-      (y, seed'')      = Random.generate (Random.float -500 500) seed'
-      (color, seed''') = randomElement dotColors seed''
-      dot = { x     = x
-            , y     = y
-            , color = color
+  let (x, seed')         = Random.generate (Random.float -500 500) seed
+      (y, seed'')        = Random.generate (Random.float -500 500) seed'
+      (color, seed''')   = randomElement dotColors seed''
+      (maxAge, seed'''') = Random.generate (Random.int 1 maxDotAge) seed'''
+      dot = { x      = x
+            , y      = y
+            , color  = color
+            , age    = 0
+            , maxAge = maxAge
             }
-  in (dot, seed''')
+  in (dot, seed'''')
 
 step : Update -> Game -> Game
 step update ({player, dots, seed} as game) = case update of
@@ -121,8 +129,12 @@ step update ({player, dots, seed} as game) = case update of
     let player' = updateTrail player.x player.y player
     in { game | player <- player' }
   Age ->
-    let player' = { player | age <- player.age + 1 }
-    in { game | player <- player' }
+    let updateAge obj = { obj | age <- obj.age + 1 }
+        player' = updateAge player
+        dots'   = dots
+                  |> List.map updateAge
+                  |> List.filter (\dot -> dot.age <= dot.maxAge)
+    in { game | player <- player', dots <- dots' }
   Delay dt ->
     let velocity' = player.velocity + player.dVelocity * dt
         angle'    = player.angle + player.dAngle * dt
