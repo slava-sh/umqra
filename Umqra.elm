@@ -14,8 +14,6 @@ import Color
 import Color (Color)
 import Window
 import Keyboard
-import Mouse
-import Debug
 
 gameFPS : Int
 gameFPS = 35
@@ -59,8 +57,14 @@ dotEmergenceTime = 1 * second
 dotDyingTime : Float
 dotDyingTime = 1 * second
 
-playerRadius : Float
-playerRadius = 4
+playerMinRadius : Float
+playerMinRadius = 4
+
+playerMaxRadius : Float
+playerMaxRadius = 5
+
+playerBouncePeriod : Time
+playerBouncePeriod = 1 * second
 
 dotRadius : Float
 dotRadius = 3
@@ -88,6 +92,7 @@ type alias Player = Object
   , trail     : List Point
   , age       : Int
   , score     : Int
+  , radius    : Float
   }
 
 type alias Dot = Object
@@ -184,9 +189,10 @@ step update ({player, dots, seed} as game) = case update of
         dots'   = List.map updateAge dots
     in { game | player <- player', dots <- dots' }
   Delay dt -> game
+              |> \game -> { game | time <- game.time + dt }
               |> updateDots dt
               |> eatDots
-              |> updateTime dt
+              |> updatePlayer dt
 
 setState : a
         -> { obj | state : a, time : Time }
@@ -216,8 +222,8 @@ updateDots dt ({ dots } as game) =
                                         && dot.time > dotDyingTime))
   in { game | dots <- dots' }
 
-updateTime : Time -> Game -> Game
-updateTime dt ({player, dots} as game) =
+updatePlayer : Time -> Game -> Game
+updatePlayer dt ({player} as game) =
   let velocity' = player.velocity + player.dVelocity * dt
                   |> clamp minPlayerVelocity maxPlayerVelocity
       angle'    = player.angle + player.dAngle * dt
@@ -227,12 +233,11 @@ updateTime dt ({player, dots} as game) =
                   , y        <- player.y + dy * dt
                   , velocity <- velocity'
                   , angle    <- angle'
+                  , radius   <-
+                      cos (2 * pi / playerBouncePeriod * game.time)
+                      |> linearScale 1 -1 playerMinRadius playerMaxRadius
                   }
-  in
-    { game
-    | player <- player'
-    , time   <- game.time + dt
-    }
+  in { game | player <- player' }
 
 distanceSquare : Object a -> Object b -> Float
 distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
@@ -240,7 +245,7 @@ distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
 eatDots : Game -> Game
 eatDots ({ player, dots } as game) =
   let playerTouches dot  =
-        distanceSquare player dot < (playerRadius + dotRadius) ^ 2
+        distanceSquare player dot < (player.radius + dotRadius) ^ 2
       (eatenDots, dots') = List.partition playerTouches dots
       player' = { player | score <- player.score + List.length eatenDots }
   in { game | player <- player', dots <- dots' }
@@ -262,6 +267,7 @@ defaultPlayer =
   , trail     = []
   , age       = 0
   , score     = 0
+  , radius    = 0
   }
 
 defaultGame : Game
@@ -318,7 +324,7 @@ display (w, h) ({player, dots} as game) =
       , collage w h <| List.map (move (-camera.x, -camera.y)) <|
           List.indexedMap trailForm player.trail ++
           List.map dotForm dots ++
-          [ circle playerRadius
+          [ circle player.radius
             |> filled Color.white
             |> move (player.x, player.y)
           ]
