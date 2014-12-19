@@ -39,11 +39,11 @@ newDotY = 600
 trailLength : Int
 trailLength = 20
 
-minPlayerVelocity : Float
-minPlayerVelocity = 25 / second
+playerMinVelocity : Float
+playerMinVelocity = 25 / second
 
-maxPlayerVelocity : Float
-maxPlayerVelocity = 75 / second
+playerMaxVelocity : Float
+playerMaxVelocity = 75 / second
 
 dVelocity : Float
 dVelocity = 25 / second ^ 2
@@ -225,7 +225,7 @@ updateDots dt ({ dots } as game) =
 updatePlayer : Time -> Game -> Game
 updatePlayer dt ({player} as game) =
   let velocity' = player.velocity + player.dVelocity * dt
-                  |> clamp minPlayerVelocity maxPlayerVelocity
+                  |> clamp playerMinVelocity playerMaxVelocity
       angle'    = player.angle + player.dAngle * dt
       (dx, dy)  = fromPolar (velocity', angle')
       player'   = { player
@@ -260,7 +260,7 @@ defaultPlayer : Player
 defaultPlayer =
   { x         = 0
   , y         = 0
-  , velocity  = minPlayerVelocity
+  , velocity  = playerMinVelocity
   , dVelocity = 0
   , angle     = 0
   , dAngle    = 0
