@@ -32,6 +32,9 @@ display (w, h) {player} =
   let halfW  = toFloat w / 2
       halfH  = toFloat h / 2
       text s = Text.fromString s
+               |> Text.typeface ["Optima", "Helvetica Neue"]
+               |> Text.bold
+               |> Text.height 22
                |> Text.color Color.white
                |> Text.leftAligned
   in
