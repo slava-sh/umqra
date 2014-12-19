@@ -5,12 +5,14 @@ import Graphics.Collage (..)
 import List
 import Text
 import Color
+import Color (Color)
 import Window
 import Keyboard
 import Mouse
 
 type alias Game =
   { player : Player
+  , dots   : List Dot
   }
 
 type alias Object a =
@@ -24,6 +26,10 @@ type alias Player = Object
   , dVelocity : Float
   , angle     : Float
   , dAngle    : Float
+  }
+
+type alias Dot = Object
+  { color : Color
   }
 
 type Update = Input { x : Int, y : Int} | Delay Time
@@ -63,13 +69,14 @@ defaultGame =
              , angle     = 0
              , dAngle    = 0
              }
+  , dots = [{ x = -30, y = -40, color = Color.lightBlue }]
   }
 
 game : Signal Game
 game = foldp step defaultGame updates
 
 display : (Int, Int) -> Game -> Element
-display (w, h) {player} =
+display (w, h) {player, dots} =
   let halfW  = toFloat w / 2
       halfH  = toFloat h / 2
       text s = Text.fromString s
@@ -82,15 +89,18 @@ display (w, h) {player} =
         { x = player.x
         , y = player.y
         }
+      dotForm dot = circle 3
+                    |> filled dot.color
+                    |> move (dot.x, dot.y)
   in
     layers
       [ spacer w h |> color Color.black
-      , collage w h <| List.map (move (-camera.x, -camera.y))
+      , collage w h <| List.map (move (-camera.x, -camera.y)) <|
+          List.map dotForm dots ++
           [ circle 10 |> filled Color.white |> move (player.x, player.y)
           , circle 3 |> filled Color.red
             |> move (player.x, player.y)
             |> move (fromPolar (7, player.angle))
-          , circle 3 |> filled Color.red |> move (0, 0)
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text "Zzz"
       , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Hmm"
