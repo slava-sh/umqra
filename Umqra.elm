@@ -42,6 +42,14 @@ display (w, h) {player} =
           (Text.fromString "Zzz"
            |> Text.color Color.white
            |> Text.leftAligned)
+      , container w h (midTopAt (relative 0.5) (absolute 10))
+          (Text.fromString "Hmm"
+           |> Text.color Color.white
+           |> Text.leftAligned)
+      , container w h (topRightAt (absolute 10) (absolute 10))
+          (Text.fromString "Arr"
+           |> Text.color Color.white
+           |> Text.leftAligned)
       ]
 
 main : Signal Element
