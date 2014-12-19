@@ -6,6 +6,7 @@ import String
 import Array
 import Array (Array)
 import List
+import List ((::))
 import Maybe
 import Random
 import Text
@@ -17,6 +18,12 @@ import Mouse
 
 gameFPS : Int
 gameFPS = 35
+
+trailFPS : Int
+trailFPS = 5
+
+trailLength : Int
+trailLength = 20
 
 newDotProbability : Float
 newDotProbability = 1 / toFloat gameFPS
@@ -34,24 +41,33 @@ type alias Object a =
   , y : Float
   }
 
+type alias Point = Object {}
+
 type alias Player = Object
   { velocity  : Float
   , dVelocity : Float
   , angle     : Float
   , dAngle    : Float
+  , trail     : List Point
   }
 
 type alias Dot = Object
   { color : Color
   }
 
-type Update = Input { x : Int, y : Int} | Delay Time
+type Update = Input { x : Int, y : Int} | Trail | Delay Time
 
 updates : Signal Update
 updates = mergeMany
-  [ Input <~ Keyboard.arrows
-  , Delay <~ fps gameFPS
+  [ Input        <~ Keyboard.arrows
+  , always Trail <~ every (second / trailFPS)
+  , Delay        <~ fps gameFPS
   ]
+
+linearScale : Float -> Float -> Float -> Float -> Float -> Float
+linearScale oldMin oldMax newMin newMax x =
+  Debug.log (toString (oldMin, oldMax, newMin, newMax, x)) <|
+  (newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin
 
 withProbability : Float
                -> (Random.Seed -> (a, Random.Seed))
@@ -97,6 +113,9 @@ step update ({player, dots, seed} as game) = case update of
                    , dAngle    <- toFloat direction.x * (-pi) / second
                    }
     in { game | player <- player' }
+  Trail ->
+    let player' = updateTrail player.x player.y player
+    in { game | player <- player' }
   Delay dt ->
     let velocity' = player.velocity + player.dVelocity * dt
         angle'    = player.angle + player.dAngle * dt
@@ -108,24 +127,37 @@ step update ({player, dots, seed} as game) = case update of
                     , angle    <- angle'
                     }
         (newDot, seed') = withProbability newDotProbability generateDot seed
-        dots'           = maybeToList newDot ++ dots
-    in { game
-       | player <- player'
-       , dots   <- dots'
-       , seed   <- seed'
-       , time   <- game.time + dt
-       }
+        dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
+        relativeToPlayer obj =
+          { obj
+          | x <- player.x + obj.x
+          , y <- player.y + obj.y
+          }
+    in
+         { game
+         | player <- player'
+         , dots   <- dots'
+         , seed   <- seed'
+         , time   <- game.time + dt
+         }
+
+updateTrail : Float -> Float -> Player -> Player
+updateTrail x y ({ trail } as player) =
+  { player
+  | trail <- List.take trailLength <| { x = x, y = y } :: trail
+  }
 
 defaultGame : Game
 defaultGame =
   { player = { x         = 0
              , y         = 0
-             , velocity  = 5 / second
+             , velocity  = 24 / second
              , dVelocity = 0
              , angle     = 0
              , dAngle    = 0
+             , trail     = []
              }
-  , dots = [{ x = -30, y = -40, color = Color.lightBlue }]
+  , dots = []
   , seed = Random.initialSeed 499
   , time = 0
   }
@@ -155,18 +187,23 @@ display (w, h) ({player, dots} as game) =
         { x = player.x
         , y = player.y
         }
-      dotForm dot = circle 3
-                    |> filled dot.color
-                    |> move (dot.x, dot.y)
+      dotForm dot =
+        circle 3
+        |> filled dot.color
+        |> move (dot.x, dot.y)
+      scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
+      trailForm i dot =
+        circle (scaleTrail 2.5 1 <| toFloat i)
+        |> filled Color.white
+        |> alpha (scaleTrail 1 0 <| toFloat i)
+        |> move (dot.x, dot.y)
   in
     layers
       [ spacer w h |> color Color.black
       , collage w h <| List.map (move (-camera.x, -camera.y)) <|
+          List.indexedMap trailForm player.trail ++
           List.map dotForm dots ++
-          [ circle 10 |> filled Color.white |> move (player.x, player.y)
-          , circle 3 |> filled Color.red
-            |> move (player.x, player.y)
-            |> move (fromPolar (7, player.angle))
+          [ circle 4 |> filled Color.white |> move (player.x, player.y)
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           String.concat <|
