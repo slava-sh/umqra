@@ -14,6 +14,12 @@ import Window
 import Keyboard
 import Mouse
 
+gameFPS : Int
+gameFPS = 35
+
+newDotProbability : Float
+newDotProbability = 1 / toFloat gameFPS
+
 type alias Game =
   { player : Player
   , dots   : List Dot
@@ -42,7 +48,7 @@ type Update = Input { x : Int, y : Int} | Delay Time
 updates : Signal Update
 updates = mergeMany
   [ Input <~ Keyboard.arrows
-  , Delay <~ fps 35
+  , Delay <~ fps gameFPS
   ]
 
 withProbability : Float -> (Random.Seed -> (a, Random.Seed)) -> Random.Seed -> (Maybe a, Random.Seed)
@@ -89,7 +95,7 @@ step update ({player, dots, seed} as game) = case update of
                     , velocity <- velocity'
                     , angle    <- angle'
                     }
-        (newDot, seed') = withProbability 0.5 generateDot seed
+        (newDot, seed') = withProbability newDotProbability generateDot seed
         dots'           = maybeToList newDot ++ dots
     in { game | player <- player', dots <- dots', seed <- seed' }
 
