@@ -2,7 +2,11 @@ import Signal (..)
 import Time (..)
 import Graphics.Element (..)
 import Graphics.Collage (..)
+import Array
+import Array (Array)
 import List
+import Maybe
+import Random
 import Text
 import Color
 import Color (Color)
@@ -13,6 +17,7 @@ import Mouse
 type alias Game =
   { player : Player
   , dots   : List Dot
+  , seed   : Random.Seed
   }
 
 type alias Object a =
@@ -40,8 +45,34 @@ updates = mergeMany
   , Delay <~ fps 35
   ]
 
+withProbability : Float -> (Random.Seed -> (a, Random.Seed)) -> Random.Seed -> (Maybe a, Random.Seed)
+withProbability p g seed =
+  let (chance, seed') = Random.generate (Random.float 0 1) seed
+  in if | p < chance -> (Nothing, seed')
+        | otherwise  -> let (x, seed'') = g seed' in (Just x, seed'')
+
+fromJust : Maybe a -> a
+fromJust maybe = case maybe of
+  Just x -> x
+
+maybeToList : Maybe a -> List a
+maybeToList maybe = case maybe of
+  Just x  -> [x]
+  Nothing -> []
+
+generateDot : Random.Seed -> (Dot, Random.Seed)
+generateDot seed =
+  let (x, seed')       = Random.generate (Random.float -100 100) seed
+      (y, seed'')      = Random.generate (Random.float -100 100) seed'
+      (index, seed''') = Random.generate (Random.int 0 <| Array.length dotColors - 1) seed''
+      dot = { x     = x
+            , y     = y
+            , color = fromJust <| Array.get index dotColors
+            }
+  in (dot, seed''')
+
 step : Update -> Game -> Game
-step update ({player} as game) = case update of
+step update ({player, dots, seed} as game) = case update of
   Input direction ->
     let player'  = { player
                    | dVelocity <- toFloat direction.y * (0.05) / second
@@ -58,7 +89,9 @@ step update ({player} as game) = case update of
                     , velocity <- velocity'
                     , angle    <- angle'
                     }
-    in { game | player <- player' }
+        (newDot, seed') = withProbability 0.5 generateDot seed
+        dots'           = maybeToList newDot ++ dots
+    in { game | player <- player', dots <- dots', seed <- seed' }
 
 defaultGame : Game
 defaultGame =
@@ -70,7 +103,11 @@ defaultGame =
              , dAngle    = 0
              }
   , dots = [{ x = -30, y = -40, color = Color.lightBlue }]
+  , seed = Random.initialSeed 499
   }
+
+dotColors : Array Color
+dotColors = Array.fromList [Color.red, Color.lightBlue, Color.orange, Color.lightGreen]
 
 game : Signal Game
 game = foldp step defaultGame updates
