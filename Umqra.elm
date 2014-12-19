@@ -2,6 +2,7 @@ import Signal (..)
 import Time (..)
 import Graphics.Element (..)
 import Graphics.Collage (..)
+import String
 import Array
 import Array (Array)
 import List
@@ -52,7 +53,10 @@ updates = mergeMany
   , Delay <~ fps gameFPS
   ]
 
-withProbability : Float -> (Random.Seed -> (a, Random.Seed)) -> Random.Seed -> (Maybe a, Random.Seed)
+withProbability : Float
+               -> (Random.Seed -> (a, Random.Seed))
+               -> Random.Seed
+               -> (Maybe a, Random.Seed)
 withProbability p g seed =
   let (chance, seed') = Random.generate (Random.float 0 1) seed
   in if | p < chance -> (Nothing, seed')
@@ -70,7 +74,8 @@ maybeToList maybe = case maybe of
 {- The array should be non-empty -}
 randomElement : Array a -> Random.Seed -> (a, Random.Seed)
 randomElement arr seed =
-    let (index, seed') = Random.generate (Random.int 0 <| Array.length arr - 1) seed
+    let (index, seed') =
+          Random.generate (Random.int 0 <| Array.length arr - 1) seed
     in (fromJust <| Array.get index arr, seed)
 
 generateDot : Random.Seed -> (Dot, Random.Seed)
@@ -126,7 +131,12 @@ defaultGame =
   }
 
 dotColors : Array Color
-dotColors = Array.fromList [Color.red, Color.lightBlue, Color.orange, Color.lightGreen]
+dotColors = Array.fromList
+  [ Color.red
+  , Color.lightBlue
+  , Color.orange
+  , Color.lightGreen
+  ]
 
 game : Signal Game
 game = foldp step defaultGame updates
@@ -159,7 +169,11 @@ display (w, h) ({player, dots} as game) =
             |> move (fromPolar (7, player.angle))
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
-          toString (floor <| inSeconds game.time) ++ " " ++ toString (List.length dots)
+          String.concat <|
+            [ toString (floor <| inSeconds game.time)
+            , " "
+            , toString (List.length dots)
+            ]
       , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Hmm"
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text "Arr"
       ]
