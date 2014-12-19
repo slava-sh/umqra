@@ -67,14 +67,20 @@ maybeToList maybe = case maybe of
   Just x  -> [x]
   Nothing -> []
 
+{- The array should be non-empty -}
+randomElement : Array a -> Random.Seed -> (a, Random.Seed)
+randomElement arr seed =
+    let (index, seed') = Random.generate (Random.int 0 <| Array.length arr - 1) seed
+    in (fromJust <| Array.get index arr, seed)
+
 generateDot : Random.Seed -> (Dot, Random.Seed)
 generateDot seed =
-  let (x, seed')       = Random.generate (Random.float -100 100) seed
-      (y, seed'')      = Random.generate (Random.float -100 100) seed'
-      (index, seed''') = Random.generate (Random.int 0 <| Array.length dotColors - 1) seed''
+  let (x, seed')       = Random.generate (Random.float -500 500) seed
+      (y, seed'')      = Random.generate (Random.float -500 500) seed'
+      (color, seed''') = randomElement dotColors seed''
       dot = { x     = x
             , y     = y
-            , color = fromJust <| Array.get index dotColors
+            , color = color
             }
   in (dot, seed''')
 
