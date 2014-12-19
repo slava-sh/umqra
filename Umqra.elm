@@ -19,7 +19,10 @@ import Mouse
 gameFPS : Int
 gameFPS = 35
 
-trailFPS : Int
+ageFPS : Float
+ageFPS = 1 / 5
+
+trailFPS : Float
 trailFPS = 5
 
 trailLength : Int
@@ -49,24 +52,25 @@ type alias Player = Object
   , angle     : Float
   , dAngle    : Float
   , trail     : List Point
+  , age       : Int
   }
 
 type alias Dot = Object
   { color : Color
   }
 
-type Update = Input { x : Int, y : Int} | Trail | Delay Time
+type Update = Input { x : Int, y : Int} | Trail | Age | Delay Time
 
 updates : Signal Update
 updates = mergeMany
   [ Input        <~ Keyboard.arrows
   , always Trail <~ every (second / trailFPS)
+  , always Age   <~ every (second / ageFPS)
   , Delay        <~ fps gameFPS
   ]
 
 linearScale : Float -> Float -> Float -> Float -> Float -> Float
 linearScale oldMin oldMax newMin newMax x =
-  Debug.log (toString (oldMin, oldMax, newMin, newMax, x)) <|
   (newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin
 
 withProbability : Float
@@ -116,6 +120,9 @@ step update ({player, dots, seed} as game) = case update of
   Trail ->
     let player' = updateTrail player.x player.y player
     in { game | player <- player' }
+  Age ->
+    let player' = { player | age <- player.age + 1 }
+    in { game | player <- player' }
   Delay dt ->
     let velocity' = player.velocity + player.dVelocity * dt
         angle'    = player.angle + player.dAngle * dt
@@ -147,16 +154,21 @@ updateTrail x y ({ trail } as player) =
   | trail <- List.take trailLength <| { x = x, y = y } :: trail
   }
 
+defaultPlayer : Player
+defaultPlayer =
+  { x         = 0
+  , y         = 0
+  , velocity  = 24 / second
+  , dVelocity = 0
+  , angle     = 0
+  , dAngle    = 0
+  , trail     = []
+  , age       = 0
+  }
+
 defaultGame : Game
 defaultGame =
-  { player = { x         = 0
-             , y         = 0
-             , velocity  = 24 / second
-             , dVelocity = 0
-             , angle     = 0
-             , dAngle    = 0
-             , trail     = []
-             }
+  { player = defaultPlayer
   , dots = []
   , seed = Random.initialSeed 499
   , time = 0
@@ -206,11 +218,7 @@ display (w, h) ({player, dots} as game) =
           [ circle 4 |> filled Color.white |> move (player.x, player.y)
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
-          String.concat <|
-            [ toString (floor <| inSeconds game.time)
-            , " "
-            , toString (List.length dots)
-            ]
+          "Age: " ++ toString player.age
       , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Hmm"
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text "Arr"
       ]
