@@ -22,6 +22,7 @@ type alias Object a =
 type alias Player = Object
   { velocity : Float
   , angle    : Float
+  , angleV   : Float
   }
 
 type Update = Input Int | Delay Time
@@ -36,20 +37,22 @@ step : Update -> Game -> Game
 step update ({player} as game) = case update of
   Input direction ->
     let player'  = { player
-                   | angle <- player.angle - toFloat direction * pi / 4
+                   | angleV <- negate <| toFloat direction * pi / second
                    }
     in { game | player <- player' }
   Delay dt ->
-    let (dx, dy) = fromPolar (player.velocity, player.angle)
+    let angle'   = player.angle + player.angleV * dt
+        (dx, dy) = fromPolar (player.velocity, angle')
         player'  = { player
                    | x <- player.x + dx * dt
                    , y <- player.y + dy * dt
+                   , angle <- angle'
                    }
     in { game | player <- player' }
 
 defaultGame : Game
 defaultGame =
-  { player = { x = 0, y = 0, velocity = 100 / second, angle = 0 }
+  { player = { x = 0, y = 0, velocity = 100 / second, angle = 0, angleV = 0 }
   }
 
 game : Signal Game
