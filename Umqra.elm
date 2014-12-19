@@ -20,16 +20,17 @@ type alias Object a =
   }
 
 type alias Player = Object
-  { velocity : Float
-  , angle    : Float
-  , angleV   : Float
+  { velocity  : Float
+  , dVelocity : Float
+  , angle     : Float
+  , dAngle    : Float
   }
 
-type Update = Input Int | Delay Time
+type Update = Input { x : Int, y : Int} | Delay Time
 
 updates : Signal Update
 updates = mergeMany
-  [ Input <~ map .x Keyboard.arrows
+  [ Input <~ Keyboard.arrows
   , Delay <~ fps 35
   ]
 
@@ -37,22 +38,31 @@ step : Update -> Game -> Game
 step update ({player} as game) = case update of
   Input direction ->
     let player'  = { player
-                   | angleV <- negate <| toFloat direction * pi / second
+                   | dVelocity <- toFloat direction.y * (0.05) / second
+                   , dAngle    <- toFloat direction.x * (-pi) / second
                    }
     in { game | player <- player' }
   Delay dt ->
-    let angle'   = player.angle + player.angleV * dt
-        (dx, dy) = fromPolar (player.velocity, angle')
-        player'  = { player
-                   | x <- player.x + dx * dt
-                   , y <- player.y + dy * dt
-                   , angle <- angle'
-                   }
+    let velocity' = player.velocity + player.dVelocity * dt
+        angle'    = player.angle + player.dAngle * dt
+        (dx, dy)  = fromPolar (velocity', angle')
+        player'   = { player
+                    | x        <- player.x + dx * dt
+                    , y        <- player.y + dy * dt
+                    , velocity <- velocity'
+                    , angle    <- angle'
+                    }
     in { game | player <- player' }
 
 defaultGame : Game
 defaultGame =
-  { player = { x = 0, y = 0, velocity = 100 / second, angle = 0, angleV = 0 }
+  { player = { x = 0
+             , y = 0
+             , velocity = 100 / second
+             , dVelocity = 0
+             , angle = 0
+             , dAngle = 0
+             }
   }
 
 game : Signal Game
