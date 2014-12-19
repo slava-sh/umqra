@@ -47,7 +47,10 @@ newDotProbability : Float
 newDotProbability = 1 / 2 / toFloat gameFPS
 
 dotEmergenceTime : Float
-dotEmergenceTime = 5 * second
+dotEmergenceTime = 1 * second
+
+dotDyingTime : Float
+dotDyingTime = 1 * second
 
 playerRadius : Float
 playerRadius = 4
@@ -88,7 +91,7 @@ type alias Dot = Object
   , time   : Time
   }
 
-type DotState = Emerging | Ageing | Dying | Dead
+type DotState = Emerging | Ageing | Dying
 
 type Update = Input { x : Int, y : Int} | Trail | Age | Delay Time
 
@@ -180,18 +183,19 @@ updateDot dt dot =
   |> updateDotState
 
 updateDotState : Dot -> Dot
-updateDotState dot = case dot.state of
-  Emerging -> if
-    | dot.time > dotEmergenceTime -> setState Ageing dot
-    | otherwise -> dot
-  Dying    -> setState Dead dot
-  Ageing   -> if
-    | dot.age > dot.maxAge -> setState Dying dot
-    | otherwise -> dot
+updateDotState dot = if
+  | dot.state == Emerging && dot.time > dotEmergenceTime ->
+      setState Ageing dot
+  | dot.state == Ageing && dot.age > dot.maxAge ->
+      setState Dying dot
+  | otherwise -> dot
 
 updateDots : Time -> Game -> Game
 updateDots dt ({ dots } as game) =
-  let dots' = List.map (updateDot dt) dots
+  let dots' = dots
+              |> List.map (updateDot dt)
+              |> List.filter (\dot -> dot.state == Dying
+                                   && dot.time > dotDyingTime)
   in { game | dots <- dots' }
 
 updateTime : Time -> Game -> Game
@@ -285,9 +289,14 @@ display (w, h) ({player, dots} as game) =
         , y = player.y
         }
       dotForm dot = move (dot.x, dot.y) <| case dot.state of
-        Emerging -> circle dotRadius |> filled Color.charcoal
-        Dying    -> circle (dotRadius + 3) |> filled dot.color
-        Ageing   -> circle dotRadius |> filled dot.color
+        Emerging -> circle dotRadius
+                    |> filled dot.color
+                    |> alpha (linearScale 0 dotEmergenceTime 0 1 dot.time)
+        Ageing   -> circle dotRadius
+                    |> filled dot.color
+        Dying    -> circle dotRadius
+                    |> filled dot.color
+                    |> alpha (linearScale 0 dotDyingTime 1 0 dot.time)
       scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
       trailForm i dot =
         circle (scaleTrail 2.5 1 <| toFloat i)
