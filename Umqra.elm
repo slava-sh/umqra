@@ -31,8 +31,20 @@ trailFPS = 5
 trailLength : Int
 trailLength = 20
 
+minPlayerVelocity : Float
+minPlayerVelocity = 25 / second
+
+maxPlayerVelocity : Float
+maxPlayerVelocity = 75 / second
+
+dVelocity : Float
+dVelocity = 25 / second ^ 2
+
+dAngle : Float
+dAngle = pi / second
+
 newDotProbability : Float
-newDotProbability = 1 / 5 / toFloat gameFPS
+newDotProbability = 1 / 3 / toFloat gameFPS
 
 type alias Game =
   { player : Player
@@ -105,8 +117,8 @@ randomElement arr seed =
 
 generateDot : Random.Seed -> (Dot, Random.Seed)
 generateDot seed =
-  let (x, seed')         = Random.generate (Random.float -500 500) seed
-      (y, seed'')        = Random.generate (Random.float -500 500) seed'
+  let (x, seed')         = Random.generate (Random.float -200 200) seed
+      (y, seed'')        = Random.generate (Random.float -200 200) seed'
       (color, seed''')   = randomElement dotColors seed''
       (maxAge, seed'''') = Random.generate (Random.int 1 maxDotAge) seed'''
       dot = { x      = x
@@ -121,8 +133,8 @@ step : Update -> Game -> Game
 step update ({player, dots, seed} as game) = case update of
   Input direction ->
     let player'  = { player
-                   | dVelocity <- toFloat direction.y * (0.05) / second
-                   , dAngle    <- toFloat direction.x * (-pi) / second
+                   | dVelocity <- toFloat direction.y * dVelocity
+                   , dAngle    <- toFloat direction.x * -dAngle
                    }
     in { game | player <- player' }
   Trail ->
@@ -137,6 +149,7 @@ step update ({player, dots, seed} as game) = case update of
     in { game | player <- player', dots <- dots' }
   Delay dt ->
     let velocity' = player.velocity + player.dVelocity * dt
+                    |> clamp minPlayerVelocity maxPlayerVelocity
         angle'    = player.angle + player.dAngle * dt
         (dx, dy)  = fromPolar (velocity', angle')
         player'   = { player
@@ -153,12 +166,12 @@ step update ({player, dots, seed} as game) = case update of
           , y <- player.y + obj.y
           }
     in
-         { game
-         | player <- player'
-         , dots   <- dots'
-         , seed   <- seed'
-         , time   <- game.time + dt
-         }
+      { game
+      | player <- player'
+      , dots   <- dots'
+      , seed   <- seed'
+      , time   <- game.time + dt
+      }
 
 updateTrail : Float -> Float -> Player -> Player
 updateTrail x y ({ trail } as player) =
@@ -170,7 +183,7 @@ defaultPlayer : Player
 defaultPlayer =
   { x         = 0
   , y         = 0
-  , velocity  = 24 / second
+  , velocity  = minPlayerVelocity / second
   , dVelocity = 0
   , angle     = 0
   , dAngle    = 0
