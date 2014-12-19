@@ -24,13 +24,21 @@ type alias Player = Object
   , angle    : Float
   }
 
-type Update = Delay Time
+type Update = Input Int | Delay Time
 
 updates : Signal Update
-updates = Delay <~ fps 35
+updates = mergeMany
+  [ Input <~ map .x Keyboard.arrows
+  , Delay <~ fps 35
+  ]
 
 step : Update -> Game -> Game
 step update ({player} as game) = case update of
+  Input direction ->
+    let player'  = { player
+                   | angle <- player.angle - toFloat direction * pi / 4
+                   }
+    in { game | player <- player' }
   Delay dt ->
     let (dx, dy) = fromPolar (player.velocity, player.angle)
         player'  = { player
