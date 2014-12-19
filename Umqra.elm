@@ -15,18 +15,22 @@ import Color (Color)
 import Window
 import Keyboard
 import Mouse
+import Debug
 
 gameFPS : Int
 gameFPS = 35
 
-ageFPS : Float
-ageFPS = 1 / 5
+agePS : Float
+agePS = 1 / 5
 
 maxDotAge : Int
 maxDotAge = 3
 
 trailFPS : Float
 trailFPS = 5
+
+newDotsExpectedPS : Float
+newDotsExpectedPS = 1
 
 trailLength : Int
 trailLength = 20
@@ -42,9 +46,6 @@ dVelocity = 25 / second ^ 2
 
 dAngle : Float
 dAngle = pi / second
-
-newDotProbability : Float
-newDotProbability = 1 / 2 / toFloat gameFPS
 
 dotEmergenceTime : Float
 dotEmergenceTime = 1 * second
@@ -93,14 +94,16 @@ type alias Dot = Object
 
 type DotState = Emerging | Ageing | Dying
 
-type Update = Input { x : Int, y : Int} | Trail | Age | Delay Time
+type Update = Input { x : Int, y : Int} | Trail | NewDot | Age | Delay Time
 
 updates : Signal Update
 updates = mergeMany
-  [ Input        <~ Keyboard.arrows
-  , always Trail <~ every (second / trailFPS)
-  , always Age   <~ every (second / ageFPS)
-  , Delay        <~ fps gameFPS
+  [ Input         <~ Keyboard.arrows
+  , always Trail  <~ every (second / trailFPS)
+  -- A new dot appears with the probability 1/2
+  , always NewDot <~ every (second / newDotsExpectedPS / 2)
+  , always Age    <~ every (second / agePS)
+  , Delay         <~ fps gameFPS
   ]
 
 linearScale : Float -> Float -> Float -> Float -> Float -> Float
@@ -160,6 +163,15 @@ step update ({player, dots, seed} as game) = case update of
   Trail ->
     let player' = updateTrail player.x player.y player
     in { game | player <- player' }
+  NewDot ->
+    let (newDot, seed') = withProbability 0.5 generateDot seed
+        dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
+        relativeToPlayer obj =
+          { obj
+          | x <- player.x + obj.x
+          , y <- player.y + obj.y
+          }
+    in { game | dots <- dots', seed <- seed' }
   Age ->
     let updateAge obj = { obj | age <- obj.age + 1 }
         player' = updateAge player
@@ -171,8 +183,8 @@ step update ({player, dots, seed} as game) = case update of
               |> updateTime dt
 
 setState : a
-           -> { obj | state : a, time : Time }
-           -> { obj | state : a, time : Time }
+        -> { obj | state : a, time : Time }
+        -> { obj | state : a, time : Time }
 setState newState obj = { obj | state <- newState, time <- 0 }
 
 updateDot : Time -> Dot -> Dot
@@ -194,12 +206,12 @@ updateDots : Time -> Game -> Game
 updateDots dt ({ dots } as game) =
   let dots' = dots
               |> List.map (updateDot dt)
-              |> List.filter (\dot -> dot.state == Dying
-                                   && dot.time > dotDyingTime)
+              |> List.filter (\dot -> not (dot.state == Dying
+                                        && dot.time > dotDyingTime))
   in { game | dots <- dots' }
 
 updateTime : Time -> Game -> Game
-updateTime dt ({player, dots, seed} as game) =
+updateTime dt ({player, dots} as game) =
   let velocity' = player.velocity + player.dVelocity * dt
                   |> clamp minPlayerVelocity maxPlayerVelocity
       angle'    = player.angle + player.dAngle * dt
@@ -210,18 +222,9 @@ updateTime dt ({player, dots, seed} as game) =
                   , velocity <- velocity'
                   , angle    <- angle'
                   }
-      (newDot, seed') = withProbability newDotProbability generateDot seed
-      dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
-      relativeToPlayer obj =
-        { obj
-        | x <- player.x + obj.x
-        , y <- player.y + obj.y
-        }
   in
     { game
     | player <- player'
-    , dots   <- dots'
-    , seed   <- seed'
     , time   <- game.time + dt
     }
 
