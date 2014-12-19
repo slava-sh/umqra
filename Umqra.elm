@@ -46,6 +46,9 @@ dAngle = pi / second
 newDotProbability : Float
 newDotProbability = 1 / 2 / toFloat gameFPS
 
+dotEmergenceTime : Float
+dotEmergenceTime = 5 * second
+
 playerRadius : Float
 playerRadius = 4
 
@@ -81,7 +84,11 @@ type alias Dot = Object
   { color  : Color
   , age    : Int
   , maxAge : Int
+  , state  : DotState
+  , time   : Time
   }
+
+type DotState = Emerging | Ageing | Dying | Dead
 
 type Update = Input { x : Int, y : Int} | Trail | Age | Delay Time
 
@@ -103,8 +110,9 @@ withProbability : Float
                -> (Maybe a, Random.Seed)
 withProbability p g seed =
   let (chance, seed') = Random.generate (Random.float 0 1) seed
-  in if | p < chance -> (Nothing, seed')
-        | otherwise  -> let (x, seed'') = g seed' in (Just x, seed'')
+  in if
+    | p < chance -> (Nothing, seed')
+    | otherwise  -> let (x, seed'') = g seed' in (Just x, seed'')
 
 fromJust : Maybe a -> a
 fromJust maybe = case maybe of
@@ -133,6 +141,8 @@ generateDot seed =
             , color  = color
             , age    = 0
             , maxAge = maxAge
+            , state  = Emerging
+            , time   = 0
             }
   in (dot, seed'''')
 
@@ -150,16 +160,42 @@ step update ({player, dots, seed} as game) = case update of
   Age ->
     let updateAge obj = { obj | age <- obj.age + 1 }
         player' = updateAge player
-        dots'   = dots
-                  |> List.map updateAge
-                  |> List.filter (\dot -> dot.age <= dot.maxAge)
+        dots'   = List.map updateAge dots
     in { game | player <- player', dots <- dots' }
   Delay dt -> game
+              |> updateDots dt
               |> eatDots
-              |> updatePhysics' dt
+              |> updateTime dt
 
-updatePhysics' : Time -> Game -> Game
-updatePhysics' dt ({player, dots, seed} as game) =
+setState : a
+           -> { obj | state : a, time : Time }
+           -> { obj | state : a, time : Time }
+setState newState obj = { obj | state <- newState, time <- 0 }
+
+updateDot : Time -> Dot -> Dot
+updateDot dt dot =
+  { dot
+  | time <- dot.time + dt
+  }
+  |> updateDotState
+
+updateDotState : Dot -> Dot
+updateDotState dot = case dot.state of
+  Emerging -> if
+    | dot.time > dotEmergenceTime -> setState Ageing dot
+    | otherwise -> dot
+  Dying    -> setState Dead dot
+  Ageing   -> if
+    | dot.age > dot.maxAge -> setState Dying dot
+    | otherwise -> dot
+
+updateDots : Time -> Game -> Game
+updateDots dt ({ dots } as game) =
+  let dots' = List.map (updateDot dt) dots
+  in { game | dots <- dots' }
+
+updateTime : Time -> Game -> Game
+updateTime dt ({player, dots, seed} as game) =
   let velocity' = player.velocity + player.dVelocity * dt
                   |> clamp minPlayerVelocity maxPlayerVelocity
       angle'    = player.angle + player.dAngle * dt
@@ -248,10 +284,10 @@ display (w, h) ({player, dots} as game) =
         { x = player.x
         , y = player.y
         }
-      dotForm dot =
-        circle dotRadius
-        |> filled dot.color
-        |> move (dot.x, dot.y)
+      dotForm dot = move (dot.x, dot.y) <| case dot.state of
+        Emerging -> circle dotRadius |> filled Color.charcoal
+        Dying    -> circle (dotRadius + 3) |> filled dot.color
+        Ageing   -> circle dotRadius |> filled dot.color
       scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
       trailForm i dot =
         circle (scaleTrail 2.5 1 <| toFloat i)
