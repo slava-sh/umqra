@@ -29,8 +29,11 @@ game = constant
 
 display : (Int, Int) -> Game -> Element
 display (w, h) {player} =
-  let halfW = toFloat w / 2
-      halfH = toFloat h / 2
+  let halfW  = toFloat w / 2
+      halfH  = toFloat h / 2
+      text s = Text.fromString s
+               |> Text.color Color.white
+               |> Text.leftAligned
   in
     layers
       [ collage w h
@@ -38,18 +41,9 @@ display (w, h) {player} =
           , circle 10 |> filled Color.white |> move (player.x, player.y)
           , circle 3 |> filled Color.red |> move (0, 0)
           ]
-      , container w h (topLeftAt (absolute 10) (absolute 10))
-          (Text.fromString "Zzz"
-           |> Text.color Color.white
-           |> Text.leftAligned)
-      , container w h (midTopAt (relative 0.5) (absolute 10))
-          (Text.fromString "Hmm"
-           |> Text.color Color.white
-           |> Text.leftAligned)
-      , container w h (topRightAt (absolute 10) (absolute 10))
-          (Text.fromString "Arr"
-           |> Text.color Color.white
-           |> Text.leftAligned)
+      , container w h (topLeftAt (absolute 10) (absolute 10)) (text "Zzz")
+      , container w h (midTopAt (relative 0.5) (absolute 10)) (text "Hmm")
+      , container w h (topRightAt (absolute 10) (absolute 10)) (text "Arr")
       ]
 
 main : Signal Element
