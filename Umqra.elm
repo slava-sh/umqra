@@ -46,6 +46,12 @@ dAngle = pi / second
 newDotProbability : Float
 newDotProbability = 1 / 3 / toFloat gameFPS
 
+playerRadius : Float
+playerRadius = 4
+
+dotRadius : Float
+dotRadius = 3
+
 type alias Game =
   { player : Player
   , dots   : List Dot
@@ -68,6 +74,7 @@ type alias Player = Object
   , dAngle    : Float
   , trail     : List Point
   , age       : Int
+  , score     : Int
   }
 
 type alias Dot = Object
@@ -172,6 +179,18 @@ step update ({player, dots, seed} as game) = case update of
       , seed   <- seed'
       , time   <- game.time + dt
       }
+      |> eatDots
+
+distanceSquare : Object a -> Object b -> Float
+distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
+
+eatDots : Game -> Game
+eatDots ({ player, dots } as game) =
+  let playerTouches dot  =
+        distanceSquare player dot < (playerRadius + dotRadius) ^ 2
+      (eatenDots, dots') = List.partition playerTouches dots
+      player' = { player | score <- player.score + List.length eatenDots }
+  in { game | player <- player', dots <- dots' }
 
 updateTrail : Float -> Float -> Player -> Player
 updateTrail x y ({ trail } as player) =
@@ -189,6 +208,7 @@ defaultPlayer =
   , dAngle    = 0
   , trail     = []
   , age       = 0
+  , score     = 0
   }
 
 defaultGame : Game
@@ -225,7 +245,7 @@ display (w, h) ({player, dots} as game) =
         , y = player.y
         }
       dotForm dot =
-        circle 3
+        circle dotRadius
         |> filled dot.color
         |> move (dot.x, dot.y)
       scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
@@ -240,12 +260,15 @@ display (w, h) ({player, dots} as game) =
       , collage w h <| List.map (move (-camera.x, -camera.y)) <|
           List.indexedMap trailForm player.trail ++
           List.map dotForm dots ++
-          [ circle 4 |> filled Color.white |> move (player.x, player.y)
+          [ circle playerRadius
+            |> filled Color.white
+            |> move (player.x, player.y)
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           "Age: " ++ toString player.age
-      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Hmm"
-      , container w h (topRightAt (absolute 10) (absolute 10)) <| text "Arr"
+      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Arr"
+      , container w h (topRightAt (absolute 10) (absolute 10)) <| text <|
+          "Score: " ++ toString player.score
       ]
 
 main : Signal Element
