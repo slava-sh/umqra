@@ -185,8 +185,8 @@ randomDot = Random.customGenerator <| \seed ->
            , dAngle   = dAngle
            }
 
-step : Update -> Game -> Game
-step update ({player, dots, seed} as game) = case update of
+updateGame : Update -> Game -> Game
+updateGame update ({ player, dots, seed } as game) = case update of
   Input direction ->
     let player'  = { player
                    | dVelocity <- toFloat direction.y * playerdVelocity
@@ -253,7 +253,7 @@ updateDots dt ({ dots } as game) =
   in { game | dots <- dots' }
 
 updatePlayer : Time -> Game -> Game
-updatePlayer dt ({player} as game) =
+updatePlayer dt ({ player } as game) =
   let velocity' = player.velocity + player.dVelocity * dt
                   |> clamp playerMinVelocity playerMaxVelocity
       angle'    = player.angle + player.dAngle * dt
@@ -316,22 +316,42 @@ dotColors = Array.fromList
   ]
 
 game : Signal Game
-game = foldp step defaultGame updates
+game = foldp updateGame defaultGame updates
 
-display : (Int, Int) -> Game -> Element
-display (w, h) ({player, dots} as game) =
-  let halfW  = toFloat w / 2
-      halfH  = toFloat h / 2
+scene : Signal Scene
+scene = foldp updateScene defaultScene game
+
+type alias Camera = Object {}
+
+type alias Scene =
+  { game   : Game
+  , camera : Camera
+  }
+
+updateScene : Game -> Scene -> Scene
+updateScene ({ player } as game) ({ camera } as scene) =
+  let camera' =
+        { camera
+        | x <- player.x
+        , y <- player.y
+        }
+  in { scene | game <- game, camera <- camera' }
+
+defaultScene : Scene
+defaultScene =
+  { game   = defaultGame
+  , camera = { x = 0, y = 0 }
+  }
+
+display : (Int, Int) -> Scene -> Element
+display (w, h) { game, camera } =
+  let { player, dots } = game
       text s = Text.fromString s
                |> Text.typeface ["Optima", "Helvetica Neue"]
                |> Text.bold
                |> Text.height 22
                |> Text.color Color.white
                |> Text.leftAligned
-      camera =
-        { x = player.x
-        , y = player.y
-        }
       dotForm dot = move (dot.x, dot.y) <| case dot.state of
         Emerging -> circle dotRadius
                     |> filled dot.color
@@ -365,4 +385,4 @@ display (w, h) ({player, dots} as game) =
       ]
 
 main : Signal Element
-main = display <~ Window.dimensions ~ game
+main = display <~ Window.dimensions ~ scene
