@@ -14,6 +14,8 @@ import Color
 import Color (Color)
 import Window
 import Keyboard
+import Touch
+import Touch (Touch)
 
 gameFPS : Int
 gameFPS = 35
@@ -79,10 +81,11 @@ dotMaxdAngle : Float
 dotMaxdAngle = 2 * pi / second
 
 type alias Game =
-  { player : Player
-  , dots   : List Dot
-  , seed   : Random.Seed
-  , time   : Time
+  { player  : Player
+  , targets : List Point
+  , dots    : List Dot
+  , seed    : Random.Seed
+  , time    : Time
   }
 
 type alias Object a =
@@ -117,11 +120,18 @@ type alias Dot = Object
 
 type DotState = Emerging | Ageing | Dying
 
-type Update = Input { x : Int, y : Int} | Trail | NewDot | Age | Delay Time
+type Update
+  = Input { x : Int, y : Int }
+  | Targets (List Touch) (Int, Int)
+  | Trail
+  | NewDot
+  | Age
+  | Delay Time
 
 updates : Signal Update
 updates = mergeMany
   [ Input         <~ Keyboard.arrows
+  , Targets       <~ Touch.touches ~ Window.dimensions
   , always Trail  <~ every (second / trailsPS)
   -- A new dot appears with the probability 1/2
   , always NewDot <~ every (second / newDotsExpectedPS / 2)
@@ -188,35 +198,83 @@ randomDot = Random.customGenerator <| \seed ->
            , dAngle   = dAngle
            }
 
-updateGame : Update -> Game -> Game
-updateGame update ({ player, dots, seed } as game) = case update of
-  Input direction ->
-    let player'  = { player
-                   | dVelocity <- toFloat direction.y * playerdVelocity
-                   , dAngle    <- toFloat direction.x * -playerdAngle
-                   }
-    in { game | player <- player' }
-  Trail ->
-    let player' = updateTrail player.x player.y player
-    in { game | player <- player' }
-  NewDot ->
-    let (newDot, seed') = Random.generate (withProbability 0.5 randomDot) seed
-        dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
-        relativeToPlayer obj = { obj
-                               | x <- player.x + obj.x
-                               , y <- player.y + obj.y
-                               }
-    in { game | dots <- dots', seed <- seed' }
-  Age ->
-    let updateAge obj = { obj | age <- obj.age + 1 }
-        player'       = updateAge player
-        dots'         = List.map updateAge dots
-    in { game | player <- player', dots <- dots' }
-  Delay dt -> game
-              |> \game -> { game | time <- game.time + dt }
-              |> updateDots dt
-              |> updatePlayer dt
-              |> eatDots
+type alias Camera = Object {}
+
+type alias Scene =
+  { game   : Game
+  , camera : Camera
+  }
+
+scene : Signal Scene
+scene = foldp updateScene defaultScene updates
+
+defaultScene : Scene
+defaultScene =
+  { game   = defaultGame
+  , camera = { x = 0, y = 0 }
+  }
+
+updateScene : Update -> Scene -> Scene
+updateScene update = updateGame update >> updateCamera
+
+updateCamera : Scene -> Scene
+updateCamera ({ game, camera } as scene) =
+  let player = game.player
+      halfFrame = cameraFrameSize / 2
+      camera' =
+        { camera
+        | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
+        , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
+        }
+  in { scene | camera <- camera' }
+
+updateGame : Update -> Scene -> Scene
+updateGame update ({ game, camera } as scene) =
+  let { player, dots, seed } = game
+  in case update of
+    Input direction ->
+      let player'  = { player
+                     | dVelocity <- toFloat direction.y * playerdVelocity
+                     , dAngle    <- toFloat direction.x * -playerdAngle
+                     }
+          game' = { game | player <- player' }
+      in { scene | game <- game' }
+    Targets targets (w, h) ->
+      let halfW = toFloat w / 2
+          halfH = toFloat h / 2
+          targets' = targets
+                     |> List.map (\{ x, y } ->
+                          { x = toFloat x - halfW + camera.x
+                          , y = halfH - toFloat y + camera.y
+                          })
+          game' = { game | targets <- targets' }
+      in { scene | game <- game' }
+    Trail ->
+      let player' = updateTrail player.x player.y player
+          game' = { game | player <- player' }
+      in { scene | game <- game' }
+    NewDot ->
+      let (newDot, seed') = Random.generate (withProbability 0.5 randomDot) seed
+          dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
+          relativeToPlayer obj = { obj
+                                 | x <- player.x + obj.x
+                                 , y <- player.y + obj.y
+                                 }
+          game' = { game | dots <- dots', seed <- seed' }
+      in { scene | game <- game' }
+    Age ->
+      let updateAge obj = { obj | age <- obj.age + 1 }
+          player'       = updateAge player
+          dots'         = List.map updateAge dots
+          game' = { game | player <- player', dots <- dots' }
+      in { scene | game <- game' }
+    Delay dt ->
+      let game' = game
+                  |> \game -> { game | time <- game.time + dt }
+                  |> updateDots dt
+                  |> updatePlayer dt
+                  |> eatDots
+      in { scene | game <- game' }
 
 setState : a
         -> { obj | state : a, time : Time }
@@ -256,10 +314,14 @@ updateDots dt ({ dots } as game) =
   in { game | dots <- dots' }
 
 updatePlayer : Time -> Game -> Game
-updatePlayer dt ({ player } as game) =
+updatePlayer dt ({ player, targets } as game) =
   let velocity' = player.velocity + player.dVelocity * dt
                   |> clamp playerMinVelocity playerMaxVelocity
-      angle'    = player.angle + player.dAngle * dt
+      angle'    = if
+        | List.isEmpty targets -> player.angle + player.dAngle * dt
+        | otherwise            ->
+            let target = List.head targets
+            in toPolar (target.x - player.x, target.y - player.y) |> snd
       (dx, dy)  = fromPolar (velocity', angle')
       player'   = { player
                   | x        <- player.x + dx * dt
@@ -304,10 +366,11 @@ defaultPlayer =
 
 defaultGame : Game
 defaultGame =
-  { player = defaultPlayer
-  , dots = []
-  , seed = Random.initialSeed 499
-  , time = 0
+  { player  = defaultPlayer
+  , targets = []
+  , dots    = []
+  , seed    = Random.initialSeed 499
+  , time    = 0
   }
 
 dotColors : Array Color
@@ -318,38 +381,9 @@ dotColors = Array.fromList
   , Color.lightGreen
   ]
 
-game : Signal Game
-game = foldp updateGame defaultGame updates
-
-scene : Signal Scene
-scene = foldp updateScene defaultScene game
-
-type alias Camera = Object {}
-
-type alias Scene =
-  { game   : Game
-  , camera : Camera
-  }
-
-updateScene : Game -> Scene -> Scene
-updateScene ({ player } as game) ({ camera } as scene) =
-  let halfFrame = cameraFrameSize / 2
-      camera' =
-        { camera
-        | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
-        , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
-        }
-  in { scene | game <- game, camera <- camera' }
-
-defaultScene : Scene
-defaultScene =
-  { game   = defaultGame
-  , camera = { x = 0, y = 0 }
-  }
-
 display : (Int, Int) -> Scene -> Element
 display (w, h) { game, camera } =
-  let { player, dots } = game
+  let { player, dots, targets } = game
       text s = Text.fromString s
                |> Text.typeface ["Optima", "Helvetica Neue"]
                |> Text.bold
