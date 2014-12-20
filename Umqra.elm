@@ -30,6 +30,9 @@ trailsPS = 5
 newDotsExpectedPS : Float
 newDotsExpectedPS = 1
 
+cameraFrameSize : Float
+cameraFrameSize = 300
+
 newDotX : Float
 newDotX = 1000
 
@@ -330,10 +333,11 @@ type alias Scene =
 
 updateScene : Game -> Scene -> Scene
 updateScene ({ player } as game) ({ camera } as scene) =
-  let camera' =
+  let halfFrame = cameraFrameSize / 2
+      camera' =
         { camera
-        | x <- player.x
-        , y <- player.y
+        | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
+        , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
         }
   in { scene | game <- game, camera <- camera' }
 
