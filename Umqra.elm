@@ -156,28 +156,34 @@ randomElement arr = Random.customGenerator <| \seed->
           Random.generate (Random.int 0 <| Array.length arr - 1) seed
     in (fromJust <| Array.get index arr, seed)
 
+type alias RandomM a = Random.Seed -> (a, Random.Seed)
+
 randomDot : Random.Generator Dot
 randomDot = Random.customGenerator <| \seed ->
-  let (x, seed1)        = Random.generate (Random.float -newDotX newDotX) seed
-      (y, seed2)        = Random.generate (Random.float -newDotY newDotY) seed1
-      (color, seed3)    = Random.generate (randomElement dotColors) seed2
-      (maxAge, seed4)   = Random.generate (Random.int 1 maxDotAge) seed3
-      (velocity, seed5) = Random.generate (Random.float 0 dotMaxVelocity) seed4
-      (angle, seed6)    = Random.generate (Random.float (-pi) (pi)) seed5
-      (dAngle, seed7)   = Random.generate
-                            (Random.float -dotMaxdAngle dotMaxdAngle) seed6
-      dot               = { x        = x
-                          , y        = y
-                          , color    = color
-                          , age      = 0
-                          , maxAge   = maxAge
-                          , state    = Emerging
-                          , time     = 0
-                          , velocity = velocity
-                          , angle    = angle
-                          , dAngle   = dAngle
-                          }
-  in (dot, seed7)
+  let andThen : RandomM a -> (a -> RandomM b) -> RandomM b
+      andThen m f = \seed -> let (x, seed') = m seed in f x seed'
+      return : a -> RandomM a
+      return x = \seed -> (x, seed)
+  in seed |>
+    Random.generate (Random.float -newDotX newDotX) `andThen` \x ->
+    Random.generate (Random.float -newDotY newDotY) `andThen` \y ->
+    Random.generate (randomElement dotColors) `andThen` \color ->
+    Random.generate (Random.int 1 maxDotAge) `andThen` \maxAge ->
+    Random.generate (Random.float 0 dotMaxVelocity) `andThen` \velocity ->
+    Random.generate (Random.float (-pi) (pi)) `andThen` \angle ->
+    Random.generate (Random.float -dotMaxdAngle dotMaxdAngle)
+      `andThen` \dAngle ->
+    return { x        = x
+           , y        = y
+           , color    = color
+           , age      = 0
+           , maxAge   = maxAge
+           , state    = Emerging
+           , time     = 0
+           , velocity = velocity
+           , angle    = angle
+           , dAngle   = dAngle
+           }
 
 step : Update -> Game -> Game
 step update ({player, dots, seed} as game) = case update of
