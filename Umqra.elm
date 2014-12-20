@@ -122,14 +122,14 @@ linearScale oldMin oldMax newMin newMax x =
   (newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin
 
 withProbability : Float
-               -> (Random.Seed -> (a, Random.Seed))
-               -> Random.Seed
-               -> (Maybe a, Random.Seed)
-withProbability p g seed =
+               -> Random.Generator a
+               -> Random.Generator (Maybe a)
+withProbability p g = Random.customGenerator <| \seed ->
   let (chance, seed') = Random.generate (Random.float 0 1) seed
   in if
     | p < chance -> (Nothing, seed')
-    | otherwise  -> let (x, seed'') = g seed' in (Just x, seed'')
+    | otherwise  -> let (x, seed'') = Random.generate g seed'
+                    in (Just x, seed'')
 
 fromJust : Maybe a -> a
 fromJust maybe = case maybe of
@@ -141,17 +141,17 @@ maybeToList maybe = case maybe of
   Nothing -> []
 
 {- The array should be non-empty -}
-randomElement : Array a -> Random.Seed -> (a, Random.Seed)
-randomElement arr seed =
+randomElement : Array a -> Random.Generator a
+randomElement arr = Random.customGenerator <| \seed->
     let (index, seed') =
           Random.generate (Random.int 0 <| Array.length arr - 1) seed
     in (fromJust <| Array.get index arr, seed)
 
-generateDot : Random.Seed -> (Dot, Random.Seed)
-generateDot seed =
+randomDot : Random.Generator Dot
+randomDot = Random.customGenerator <| \seed ->
   let (x, seed')         = Random.generate (Random.float -newDotX newDotX) seed
       (y, seed'')        = Random.generate (Random.float -newDotY newDotY) seed'
-      (color, seed''')   = randomElement dotColors seed''
+      (color, seed''')   = Random.generate (randomElement dotColors) seed''
       (maxAge, seed'''') = Random.generate (Random.int 1 maxDotAge) seed'''
       dot = { x      = x
             , y      = y
@@ -175,7 +175,7 @@ step update ({player, dots, seed} as game) = case update of
     let player' = updateTrail player.x player.y player
     in { game | player <- player' }
   NewDot ->
-    let (newDot, seed') = withProbability 0.5 generateDot seed
+    let (newDot, seed') = Random.generate (withProbability 0.5 randomDot) seed
         dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
         relativeToPlayer obj =
           { obj
