@@ -269,7 +269,8 @@ distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
 eatDots : Game -> Game
 eatDots ({ player, dots } as game) =
   let playerEats dot = dot.state /= Dying &&
-        distanceSquare player dot < (player.radius + dotRadius) ^ 2
+        -- Eat a dot when the player covers its center
+        distanceSquare player dot < player.radius ^ 2
       (eatenDots, dots') = List.partition playerEats dots
       player' = { player | score <- player.score + List.length eatenDots }
   in { game | player <- player', dots <- dots' }
