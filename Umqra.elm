@@ -24,8 +24,8 @@ agePS = 1 / 5
 maxDotAge : Int
 maxDotAge = 3
 
-trailFPS : Float
-trailFPS = 5
+trailsPS : Float
+trailsPS = 5
 
 newDotsExpectedPS : Float
 newDotsExpectedPS = 1
@@ -110,7 +110,7 @@ type Update = Input { x : Int, y : Int} | Trail | NewDot | Age | Delay Time
 updates : Signal Update
 updates = mergeMany
   [ Input         <~ Keyboard.arrows
-  , always Trail  <~ every (second / trailFPS)
+  , always Trail  <~ every (second / trailsPS)
   -- A new dot appears with the probability 1/2
   , always NewDot <~ every (second / newDotsExpectedPS / 2)
   , always Age    <~ every (second / agePS)
@@ -177,22 +177,21 @@ step update ({player, dots, seed} as game) = case update of
   NewDot ->
     let (newDot, seed') = Random.generate (withProbability 0.5 randomDot) seed
         dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
-        relativeToPlayer obj =
-          { obj
-          | x <- player.x + obj.x
-          , y <- player.y + obj.y
-          }
+        relativeToPlayer obj = { obj
+                               | x <- player.x + obj.x
+                               , y <- player.y + obj.y
+                               }
     in { game | dots <- dots', seed <- seed' }
   Age ->
     let updateAge obj = { obj | age <- obj.age + 1 }
-        player' = updateAge player
-        dots'   = List.map updateAge dots
+        player'       = updateAge player
+        dots'         = List.map updateAge dots
     in { game | player <- player', dots <- dots' }
   Delay dt -> game
               |> \game -> { game | time <- game.time + dt }
               |> updateDots dt
-              |> eatDots
               |> updatePlayer dt
+              |> eatDots
 
 setState : a
         -> { obj | state : a, time : Time }
@@ -252,9 +251,7 @@ eatDots ({ player, dots } as game) =
 
 updateTrail : Float -> Float -> Player -> Player
 updateTrail x y ({ trail } as player) =
-  { player
-  | trail <- List.take trailLength <| { x = x, y = y } :: trail
-  }
+  { player | trail <- List.take trailLength <| { x = x, y = y } :: trail }
 
 defaultPlayer : Player
 defaultPlayer =
