@@ -45,11 +45,11 @@ playerMinVelocity = 25 / second
 playerMaxVelocity : Float
 playerMaxVelocity = 75 / second
 
-dVelocity : Float
-dVelocity = 25 / second ^ 2
+playerdVelocity : Float
+playerdVelocity = 25 / second ^ 2
 
-dAngle : Float
-dAngle = pi / second
+playerdAngle : Float
+playerdAngle = pi / second
 
 dotEmergenceTime : Float
 dotEmergenceTime = 1 * second
@@ -68,6 +68,12 @@ playerBouncePeriod = 1 * second
 
 dotRadius : Float
 dotRadius = 3
+
+dotMaxVelocity : Float
+dotMaxVelocity = 15 / second
+
+dotMaxdAngle : Float
+dotMaxdAngle = 2 * pi / second
 
 type alias Game =
   { player : Player
@@ -96,11 +102,14 @@ type alias Player = Object
   }
 
 type alias Dot = Object
-  { color  : Color
-  , age    : Int
-  , maxAge : Int
-  , state  : DotState
-  , time   : Time
+  { color    : Color
+  , age      : Int
+  , maxAge   : Int
+  , state    : DotState
+  , time     : Time
+  , velocity : Float
+  , angle    : Float
+  , dAngle   : Float
   }
 
 type DotState = Emerging | Ageing | Dying
@@ -149,26 +158,33 @@ randomElement arr = Random.customGenerator <| \seed->
 
 randomDot : Random.Generator Dot
 randomDot = Random.customGenerator <| \seed ->
-  let (x, seed')         = Random.generate (Random.float -newDotX newDotX) seed
-      (y, seed'')        = Random.generate (Random.float -newDotY newDotY) seed'
-      (color, seed''')   = Random.generate (randomElement dotColors) seed''
-      (maxAge, seed'''') = Random.generate (Random.int 1 maxDotAge) seed'''
-      dot = { x      = x
-            , y      = y
-            , color  = color
-            , age    = 0
-            , maxAge = maxAge
-            , state  = Emerging
-            , time   = 0
-            }
-  in (dot, seed'''')
+  let (x, seed1)        = Random.generate (Random.float -newDotX newDotX) seed
+      (y, seed2)        = Random.generate (Random.float -newDotY newDotY) seed1
+      (color, seed3)    = Random.generate (randomElement dotColors) seed2
+      (maxAge, seed4)   = Random.generate (Random.int 1 maxDotAge) seed3
+      (velocity, seed5) = Random.generate (Random.float 0 dotMaxVelocity) seed4
+      (angle, seed6)    = Random.generate (Random.float (-pi) (pi)) seed5
+      (dAngle, seed7)   = Random.generate
+                            (Random.float -dotMaxdAngle dotMaxdAngle) seed6
+      dot               = { x        = x
+                          , y        = y
+                          , color    = color
+                          , age      = 0
+                          , maxAge   = maxAge
+                          , state    = Emerging
+                          , time     = 0
+                          , velocity = velocity
+                          , angle    = angle
+                          , dAngle   = dAngle
+                          }
+  in (dot, seed7)
 
 step : Update -> Game -> Game
 step update ({player, dots, seed} as game) = case update of
   Input direction ->
     let player'  = { player
-                   | dVelocity <- toFloat direction.y * dVelocity
-                   , dAngle    <- toFloat direction.x * -dAngle
+                   | dVelocity <- toFloat direction.y * playerdVelocity
+                   , dAngle    <- toFloat direction.x * -playerdAngle
                    }
     in { game | player <- player' }
   Trail ->
@@ -200,10 +216,19 @@ setState newState obj = { obj | state <- newState, time <- 0 }
 
 updateDot : Time -> Dot -> Dot
 updateDot dt dot =
-  { dot
-  | time <- dot.time + dt
-  }
-  |> updateDotState
+  let (dx, dy) = fromPolar (dot.velocity, dot.angle)
+      time'    = dot.time + dt
+      x'       = dot.x + dx * dt
+      y'       = dot.y + dy * dt
+      angle'   = dot.angle + dot.dAngle * dt
+  in
+    { dot
+    | time  <- time'
+    , x     <- x'
+    , y     <- y'
+    , angle <- angle'
+    }
+    |> updateDotState
 
 updateDotState : Dot -> Dot
 updateDotState dot = if
