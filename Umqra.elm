@@ -29,16 +29,10 @@ trailsPS : Float
 trailsPS = 5
 
 newDotsExpectedPS : Float
-newDotsExpectedPS = 1
+newDotsExpectedPS = 2
 
 cameraFrameSize : Float
 cameraFrameSize = 300
-
-newDotX : Float
-newDotX = 1000
-
-newDotY : Float
-newDotY = 600
 
 trailLength : Int
 trailLength = 20
@@ -166,8 +160,8 @@ type alias Camera = Object {}
 type alias Scene =
   { game   : Game
   , camera : Camera
-  , w      : Int
-  , h      : Int
+  , w      : Float
+  , h      : Float
   }
 
 scene : Signal Scene
@@ -177,8 +171,8 @@ defaultScene : Scene
 defaultScene = readSignal Window.dimensions |> \(w, h) ->
   { game   = defaultGame
   , camera = { x = 0, y = 0 }
-  , w      = w
-  , h      = h
+  , w      = toFloat w
+  , h      = toFloat h
   }
 
 defaultGame : Game
@@ -215,10 +209,10 @@ defaultPlayer =
   , radius    = 0
   }
 
-randomDot : Random.Generator Dot
-randomDot = Random.customGenerator <|
-  Random.generate (Random.float -newDotX newDotX) `randomThen` \x ->
-  Random.generate (Random.float -newDotY newDotY) `randomThen` \y ->
+randomDot : Float -> Float -> Float -> Float -> Random.Generator Dot
+randomDot minX maxX minY maxY = Random.customGenerator <|
+  Random.generate (Random.float minX maxX)        `randomThen` \x ->
+  Random.generate (Random.float minY maxY)        `randomThen` \y ->
   Random.generate (randomElement dotColors)       `randomThen` \color ->
   Random.generate (Random.float 0 dotMaxVelocity) `randomThen` \velocity ->
   Random.generate (Random.float (-pi) (pi))       `randomThen` \angle ->
@@ -241,7 +235,7 @@ randomDot = Random.customGenerator <|
 updateScene : Update -> Scene -> Scene
 updateScene update scene =
   let scene' = case update of
-        Window (w, h) -> { scene | w <- w, h <- h }
+        Window (w, h) -> { scene | w <- toFloat w, h <- toFloat h }
         _             -> scene
   in
     scene'
@@ -273,8 +267,8 @@ updateGame update ({ game, camera } as scene) =
           game' = { game | player <- player' }
       in { scene | game <- game' }
     Targets targets ->
-      let halfW = toFloat scene.w / 2
-          halfH = toFloat scene.h / 2
+      let halfW = scene.w / 2
+          halfH = scene.h / 2
           targets' = targets
                      |> List.map (\{ x, y } ->
                           { x = toFloat x - halfW + camera.x
@@ -288,12 +282,11 @@ updateGame update ({ game, camera } as scene) =
           game' = { game | player <- player' }
       in { scene | game <- game' }
     NewDot ->
-      let (newDot, seed') = Random.generate (withProbability 0.5 randomDot) seed
-          dots' = maybeToList (Maybe.map relativeToPlayer newDot) ++ dots
-          relativeToPlayer obj = { obj
-                                 | x <- player.x + obj.x
-                                 , y <- player.y + obj.y
-                                 }
+      let (newDot, seed') = Random.generate
+            (withProbability 0.5
+              (randomDot (player.x - scene.w) (player.x + scene.w)
+                         (player.y - scene.h) (player.y + scene.h))) seed
+          dots' = maybeToList newDot ++ dots
           game' = { game | dots <- dots', seed <- seed' }
       in { scene | game <- game' }
     Age ->
@@ -391,8 +384,10 @@ updateTrail x y ({ trail } as player) =
   { player | trail <- List.take trailLength <| { x = x, y = y } :: trail }
 
 display : Scene -> Element
-display { game, camera, w, h } =
+display ({ game, camera } as scene) =
   let { player, dots, targets } = game
+      w = floor scene.w
+      h = floor scene.h
       text s = Text.fromString s
                |> Text.typeface ["Optima", "Helvetica Neue"]
                |> Text.bold
@@ -431,7 +426,7 @@ display { game, camera, w, h } =
           | game.time <  5 * second -> "Eat dots to score points"
           | game.time < 10 * second -> "Smaller dots give you more points"
           | game.time < 15 * second -> "Hold &darr; to maneuver"
-          | game.time < 20 * second -> "Enjoy!"
+          | game.time < 18 * second -> "Enjoy!"
           | otherwise               -> ""
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text <|
           "Score: " ++ toString player.score
