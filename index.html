@@ -2085,8 +2085,8 @@ Elm.Main.make = function (_elm) {
             var halfW = _v0.w / 2;
             var isVisible = function (_v3) {
                return function () {
-                  return _U.cmp($Basics.abs(_v3.x) - _v3.radius,
-                  halfW) < 0 && _U.cmp($Basics.abs(_v3.y) - _v3.radius,
+                  return _U.cmp($Basics.abs(_v3.x - _v0.camera.x) - _v3.radius,
+                  halfW) < 0 && _U.cmp($Basics.abs(_v3.y - _v0.camera.y) - _v3.radius,
                   halfH) < 0;
                }();
             };
