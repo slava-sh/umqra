@@ -91,9 +91,14 @@ dotMaxdAngle = 2 * pi / second
 dotColors : Array Color
 dotColors = Array.fromList
   [ Color.red
-  , Color.lightBlue
   , Color.orange
+  , Color.yellow
+  , Color.green
+  , Color.lightRed
+  , Color.lightOrange
+  , Color.lightYellow
   , Color.lightGreen
+  , Color.lightBlue
   ]
 
 type alias Game =
