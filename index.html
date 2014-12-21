@@ -1964,10 +1964,10 @@ Elm.Main.make = function (_elm) {
       return v;
    },
    "Eat \'Em All");
-   var distanceSquare = F2(function (a,
+   var distance = F2(function (a,
    b) {
-      return Math.pow(a.x - b.x,
-      2) + Math.pow(a.y - b.y,2);
+      return $Basics.sqrt(Math.pow(a.x - b.x,
+      2) + Math.pow(a.y - b.y,2));
    });
    var setState = F2(function (newState,
    obj) {
@@ -1991,7 +1991,6 @@ Elm.Main.make = function (_elm) {
    };
    var Age = {ctor: "Age"};
    var NewDot = {ctor: "NewDot"};
-   var Trail = {ctor: "Trail"};
    var Window = function (a) {
       return {ctor: "Window"
              ,_0: a};
@@ -2075,12 +2074,21 @@ Elm.Main.make = function (_elm) {
                        1,
                        dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));}
                   _U.badCase($moduleName,
-                  "between lines 418 and 427");
+                  "between lines 421 and 430");
                }());
             };
             var text = function (s) {
                return $Text.leftAligned($Text.color($Color.white)($Text.height(22)($Text.bold($Text.typeface(_L.fromArray(["Optima"
                                                                                                                           ,"Helvetica Neue"]))($Text.fromString(s))))));
+            };
+            var halfH = _v0.h / 2;
+            var halfW = _v0.w / 2;
+            var isVisible = function (_v3) {
+               return function () {
+                  return _U.cmp($Basics.abs(_v3.x) - _v3.radius,
+                  halfW) < 0 && _U.cmp($Basics.abs(_v3.y) - _v3.radius,
+                  halfH) < 0;
+               }();
             };
             var h = $Basics.floor(_v0.h);
             var w = $Basics.floor(_v0.w);
@@ -2088,7 +2096,7 @@ Elm.Main.make = function (_elm) {
             player = $.player,
             dots = $.dots,
             targets = $.targets;
-            var scaleTrail = $Utils.linearScale(0)($Basics.toFloat($List.length(player.trail)) - 1);
+            var scaleTrail = $Utils.linearScale(0)($Basics.toFloat($List.length(player.trail)));
             var trailForm = F2(function (i,
             dot) {
                return $Graphics$Collage.move({ctor: "_Tuple2"
@@ -2113,7 +2121,9 @@ Elm.Main.make = function (_elm) {
                                                          A2($Basics._op["++"],
                                                          A2($List.map,
                                                          dotForm,
-                                                         dots),
+                                                         A2($List.filter,
+                                                         isVisible,
+                                                         dots)),
                                                          _L.fromArray([$Graphics$Collage.move({ctor: "_Tuple2"
                                                                                               ,_0: player.x
                                                                                               ,_1: player.y})($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(player.radius)))])))))
@@ -2213,8 +2223,8 @@ Elm.Main.make = function (_elm) {
          var angle$ = dot.angle + dot.dAngle * dt;
          var time$ = dot.time + dt;
          var radius$ = function () {
-            var _v3 = dot.state;
-            switch (_v3.ctor)
+            var _v5 = dot.state;
+            switch (_v5.ctor)
             {case "Ageing":
                return A5($Utils.linearScale,
                  0,
@@ -2227,7 +2237,7 @@ Elm.Main.make = function (_elm) {
                case "Emerging":
                return dotYoungRadius;}
             _U.badCase($moduleName,
-            "between lines 332 and 337");
+            "between lines 326 and 331");
          }();
          var $ = $Basics.fromPolar({ctor: "_Tuple2"
                                    ,_0: dot.velocity
@@ -2246,17 +2256,17 @@ Elm.Main.make = function (_elm) {
       }();
    });
    var updateDots = F2(function (dt,
-   _v4) {
+   _v6) {
       return function () {
          return function () {
             var dots$ = $List.filter(function (dot) {
                return $Basics.not(_U.eq(dot.state,
                Dying) && _U.cmp(dot.time,
                dotDyingTime) > 0);
-            })($List.map(updateDot(dt))(_v4.dots));
+            })($List.map(updateDot(dt))(_v6.dots));
             return _U.replace([["dots"
                                ,dots$]],
-            _v4);
+            _v6);
          }();
       }();
    });
@@ -2269,34 +2279,31 @@ Elm.Main.make = function (_elm) {
       $Basics.toFloat(dotMaxScore),
       dot.time));
    };
-   var eatDots = function (_v6) {
+   var eatDots = function (_v8) {
       return function () {
          return function () {
             var playerEats = function (dot) {
                return !_U.eq(dot.state,
-               Dying) && function () {
-                  var distanceToEat = _v6.player.radius + dot.radius - coverRadiusToEat;
-                  return _U.cmp(A2(distanceSquare,
-                  _v6.player,
-                  dot),
-                  Math.pow(distanceToEat,2)) < 0;
-               }();
+               Dying) && _U.cmp(A2(distance,
+               _v8.player,
+               dot),
+               _v8.player.radius + dot.radius - coverRadiusToEat) < 0;
             };
             var $ = A2($List.partition,
             playerEats,
-            _v6.dots),
+            _v8.dots),
             eatenDots = $._0,
             dots$ = $._1;
-            var score$ = _v6.player.score + $List.sum(A2($List.map,
+            var score$ = _v8.player.score + $List.sum(A2($List.map,
             scoreDot,
             eatenDots));
             var player$ = _U.replace([["score"
                                       ,score$]],
-            _v6.player);
+            _v8.player);
             return _U.replace([["player"
                                ,player$]
                               ,["dots",dots$]],
-            _v6);
+            _v8);
          }();
       }();
    };
@@ -2337,75 +2344,119 @@ Elm.Main.make = function (_elm) {
              ,targets: _L.fromArray([])
              ,time: 0};
    }($Utils.readSignal($Utils.currentTime));
-   var defaultScene = function (_v8) {
+   var defaultScene = function (_v10) {
       return function () {
-         switch (_v8.ctor)
+         switch (_v10.ctor)
          {case "_Tuple2": return {_: {}
                                  ,camera: {_: {},x: 0,y: 0}
                                  ,game: defaultGame
-                                 ,h: $Basics.toFloat(_v8._1)
-                                 ,w: $Basics.toFloat(_v8._0)};}
+                                 ,h: $Basics.toFloat(_v10._1)
+                                 ,w: $Basics.toFloat(_v10._0)};}
          _U.badCase($moduleName,
-         "between lines 181 and 184");
+         "between lines 179 and 182");
       }();
    }($Utils.readSignal($Window.dimensions));
-   var updatePlayer = F2(function (dt,
-   _v12) {
+   var cameraFrameSize = 300;
+   var updateCamera = function (_v14) {
       return function () {
          return function () {
-            var angle$ = $List.isEmpty(_v12.targets) ? _v12.player.angle + _v12.player.dAngle * dt : function () {
-               var target = $List.head(_v12.targets);
+            var halfFrame = cameraFrameSize / 2;
+            var $ = _v14.game,
+            player = $.player,
+            targets = $.targets;
+            var camera$ = _U.replace([["x"
+                                      ,A3($Basics.clamp,
+                                      player.x - halfFrame,
+                                      player.x + halfFrame,
+                                      _v14.camera.x)]
+                                     ,["y"
+                                      ,A3($Basics.clamp,
+                                      player.y - halfFrame,
+                                      player.y + halfFrame,
+                                      _v14.camera.y)]],
+            _v14.camera);
+            var targets$ = $List.map(function (_v16) {
+               return function () {
+                  return {_: {}
+                         ,x: _v16.x - _v14.camera.x + camera$.x
+                         ,y: _v16.y - _v14.camera.y + camera$.y};
+               }();
+            })(targets);
+            var game$ = _U.replace([["targets"
+                                    ,targets$]],
+            _v14.game);
+            return _U.replace([["camera"
+                               ,camera$]
+                              ,["game",game$]],
+            _v14);
+         }();
+      }();
+   };
+   var newDotsExpectedPS = 2;
+   var trailLength = 15;
+   var trailsPS = 10;
+   var updateTrail = function (_v18) {
+      return function () {
+         return function () {
+            var trail$ = $List.isEmpty(_v18.trail) ? _L.fromArray([{_: {}
+                                                                   ,x: _v18.x
+                                                                   ,y: _v18.y}]) : _U.cmp(A2(distance,
+            _v18,
+            $List.head(_v18.trail)),
+            _v18.velocity * $Time.second / trailsPS) > 0 ? $List.take(trailLength)(A2($List._op["::"],
+            {_: {},x: _v18.x,y: _v18.y},
+            _v18.trail)) : _v18.trail;
+            return _U.replace([["trail"
+                               ,trail$]],
+            _v18);
+         }();
+      }();
+   };
+   var updatePlayer = F2(function (dt,
+   _v20) {
+      return function () {
+         return function () {
+            var angle$ = $List.isEmpty(_v20.targets) ? _v20.player.angle + _v20.player.dAngle * dt : function () {
+               var target = $List.head(_v20.targets);
                var targetAngle = A2($Basics.atan2,
-               target.y - _v12.player.y,
-               target.x - _v12.player.x);
+               target.y - _v20.player.y,
+               target.x - _v20.player.x);
                var deltaAngle = A2($Basics.clamp,
                (0 - playerdAngle) * dt,
-               playerdAngle * dt)($Utils.normalizeAngle(targetAngle - _v12.player.angle));
-               return _v12.player.angle + deltaAngle;
+               playerdAngle * dt)($Utils.normalizeAngle(targetAngle - _v20.player.angle));
+               return _v20.player.angle + deltaAngle;
             }();
             var velocity$ = A2($Basics.clamp,
             playerMinVelocity,
-            playerMaxVelocity)(_v12.player.velocity + _v12.player.dVelocity * dt);
+            playerMaxVelocity)(_v20.player.velocity + _v20.player.dVelocity * dt);
             var $ = $Basics.fromPolar({ctor: "_Tuple2"
                                       ,_0: velocity$
                                       ,_1: angle$}),
             dx = $._0,
             dy = $._1;
-            var player$ = _U.replace([["x"
-                                      ,_v12.player.x + dx * dt]
-                                     ,["y",_v12.player.y + dy * dt]
-                                     ,["velocity",velocity$]
-                                     ,["angle",angle$]
-                                     ,["radius"
-                                      ,A4($Utils.linearScale,
-                                      1,
-                                      -1,
-                                      playerMinRadius,
-                                      playerMaxRadius)($Basics.cos(2 * $Basics.pi / playerBouncePeriod * _v12.time))]],
-            _v12.player);
+            var player$ = updateTrail(_U.replace([["x"
+                                                  ,_v20.player.x + dx * dt]
+                                                 ,["y",_v20.player.y + dy * dt]
+                                                 ,["velocity",velocity$]
+                                                 ,["angle",angle$]
+                                                 ,["radius"
+                                                  ,A4($Utils.linearScale,
+                                                  1,
+                                                  -1,
+                                                  playerMinRadius,
+                                                  playerMaxRadius)($Basics.cos(2 * $Basics.pi / playerBouncePeriod * _v20.time))]],
+            _v20.player));
             return _U.replace([["player"
                                ,player$]],
-            _v12);
+            _v20);
          }();
       }();
    });
-   var trailLength = 20;
-   var updateTrail = F3(function (x,
-   y,
-   _v14) {
-      return function () {
-         return _U.replace([["trail"
-                            ,$List.take(trailLength)(A2($List._op["::"],
-                            {_: {},x: x,y: y},
-                            _v14.trail))]],
-         _v14);
-      }();
-   });
    var updateGame = F2(function (update,
-   _v16) {
+   _v22) {
       return function () {
          return function () {
-            var $ = _v16.game,
+            var $ = _v22.game,
             player = $.player,
             dots = $.dots,
             seed = $.seed;
@@ -2418,10 +2469,10 @@ Elm.Main.make = function (_elm) {
                        player);
                        var game$ = _U.replace([["player"
                                                ,player$]],
-                       _v16.game);
+                       _v22.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v16);
+                       _v22);
                     }();
                   case "Delay":
                   return function () {
@@ -2429,10 +2480,10 @@ Elm.Main.make = function (_elm) {
                           return eatDots(updatePlayer(update._0)(updateDots(update._0)(_U.replace([["time"
                                                                                                    ,game.time + update._0]],
                           game))));
-                       }(_v16.game);
+                       }(_v22.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v16);
+                       _v22);
                     }();
                   case "Input":
                   return function () {
@@ -2444,10 +2495,10 @@ Elm.Main.make = function (_elm) {
                        player);
                        var game$ = _U.replace([["player"
                                                ,player$]],
-                       _v16.game);
+                       _v22.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v16);
+                       _v22);
                     }();
                   case "NewDot":
                   return function () {
@@ -2455,10 +2506,10 @@ Elm.Main.make = function (_elm) {
                        A2($Utils.withProbability,
                        0.5,
                        A4(randomDot,
-                       player.x - _v16.w,
-                       player.x + _v16.w,
-                       player.y - _v16.h,
-                       player.y + _v16.h)),
+                       player.x - _v22.w,
+                       player.x + _v22.w,
+                       player.y - _v22.h,
+                       player.y + _v22.h)),
                        seed),
                        newDot = $._0,
                        seed$ = $._1;
@@ -2468,87 +2519,38 @@ Elm.Main.make = function (_elm) {
                        var game$ = _U.replace([["dots"
                                                ,dots$]
                                               ,["seed",seed$]],
-                       _v16.game);
+                       _v22.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v16);
+                       _v22);
                     }();
                   case "Targets":
                   return function () {
                        var player$ = _U.replace([["dVelocity"
                                                  ,playerdVelocity]],
                        player);
-                       var halfH = _v16.h / 2;
-                       var halfW = _v16.w / 2;
-                       var targets$ = $List.map(function (_v22) {
+                       var halfH = _v22.h / 2;
+                       var halfW = _v22.w / 2;
+                       var targets$ = $List.map(function (_v28) {
                           return function () {
                              return {_: {}
-                                    ,x: $Basics.toFloat(_v22.x) - halfW + _v16.camera.x
-                                    ,y: halfH - $Basics.toFloat(_v22.y) + _v16.camera.y};
+                                    ,x: $Basics.toFloat(_v28.x) - halfW + _v22.camera.x
+                                    ,y: halfH - $Basics.toFloat(_v28.y) + _v22.camera.y};
                           }();
                        })(update._0);
                        var game$ = _U.replace([["targets"
                                                ,targets$]
                                               ,["player",player$]],
-                       _v16.game);
+                       _v22.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v16);
-                    }();
-                  case "Trail":
-                  return function () {
-                       var player$ = A3(updateTrail,
-                       player.x,
-                       player.y,
-                       player);
-                       var game$ = _U.replace([["player"
-                                               ,player$]],
-                       _v16.game);
-                       return _U.replace([["game"
-                                          ,game$]],
-                       _v16);
+                       _v22);
                     }();}
-               return _v16;
+               return _v22;
             }();
          }();
       }();
    });
-   var cameraFrameSize = 300;
-   var updateCamera = function (_v24) {
-      return function () {
-         return function () {
-            var halfFrame = cameraFrameSize / 2;
-            var $ = _v24.game,
-            player = $.player,
-            targets = $.targets;
-            var camera$ = _U.replace([["x"
-                                      ,A3($Basics.clamp,
-                                      player.x - halfFrame,
-                                      player.x + halfFrame,
-                                      _v24.camera.x)]
-                                     ,["y"
-                                      ,A3($Basics.clamp,
-                                      player.y - halfFrame,
-                                      player.y + halfFrame,
-                                      _v24.camera.y)]],
-            _v24.camera);
-            var targets$ = $List.map(function (_v26) {
-               return function () {
-                  return {_: {}
-                         ,x: _v26.x - _v24.camera.x + camera$.x
-                         ,y: _v26.y - _v24.camera.y + camera$.y};
-               }();
-            })(targets);
-            var game$ = _U.replace([["targets"
-                                    ,targets$]],
-            _v24.game);
-            return _U.replace([["camera"
-                               ,camera$]
-                              ,["game",game$]],
-            _v24);
-         }();
-      }();
-   };
    var updateScene = F2(function (update,
    scene) {
       return function () {
@@ -2568,8 +2570,6 @@ Elm.Main.make = function (_elm) {
          return updateCamera(updateGame(update)(scene$));
       }();
    });
-   var newDotsExpectedPS = 2;
-   var trailsPS = 5;
    var agePS = 1 / 5;
    var gameFPS = 35;
    var updates = $Signal.mergeMany(_L.fromArray([A2($Signal._op["<~"],
@@ -2581,9 +2581,6 @@ Elm.Main.make = function (_elm) {
                                                 ,A2($Signal._op["<~"],
                                                 Window,
                                                 $Window.dimensions)
-                                                ,A2($Signal._op["<~"],
-                                                $Basics.always(Trail),
-                                                $Time.every($Time.second / trailsPS))
                                                 ,A2($Signal._op["<~"],
                                                 $Basics.always(NewDot),
                                                 $Time.every($Time.second / newDotsExpectedPS / 2))
@@ -2604,9 +2601,9 @@ Elm.Main.make = function (_elm) {
                       ,gameFPS: gameFPS
                       ,agePS: agePS
                       ,trailsPS: trailsPS
+                      ,trailLength: trailLength
                       ,newDotsExpectedPS: newDotsExpectedPS
                       ,cameraFrameSize: cameraFrameSize
-                      ,trailLength: trailLength
                       ,playerMinVelocity: playerMinVelocity
                       ,playerMaxVelocity: playerMaxVelocity
                       ,playerdVelocity: playerdVelocity
@@ -2633,7 +2630,6 @@ Elm.Main.make = function (_elm) {
                       ,Input: Input
                       ,Targets: Targets
                       ,Window: Window
-                      ,Trail: Trail
                       ,NewDot: NewDot
                       ,Age: Age
                       ,Delay: Delay
@@ -2652,7 +2648,7 @@ Elm.Main.make = function (_elm) {
                       ,updateDotState: updateDotState
                       ,updateDots: updateDots
                       ,updatePlayer: updatePlayer
-                      ,distanceSquare: distanceSquare
+                      ,distance: distance
                       ,eatDots: eatDots
                       ,scoreDot: scoreDot
                       ,updateTrail: updateTrail
