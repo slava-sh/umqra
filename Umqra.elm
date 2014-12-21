@@ -35,7 +35,7 @@ newDotsExpectedPS : Float
 newDotsExpectedPS = 2
 
 cameraFrameSize : Float
-cameraFrameSize = 300
+cameraFrameSize = 100
 
 playerMinVelocity : Float
 playerMinVelocity = 25 / second
