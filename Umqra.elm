@@ -416,11 +416,18 @@ display { game, camera, w, h } =
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           "Age: " ++ toString player.age
-      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text <|
-          "Smaller dots give more points"
+      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text <| if
+          | game.time <  5 * second -> "Eat dots to score points"
+          | game.time < 10 * second -> "Smaller dots give you more points"
+          | game.time < 15 * second -> "Hold &darr; to maneuver"
+          | game.time < 20 * second -> "Enjoy!"
+          | otherwise               -> ""
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text <|
           "Score: " ++ toString player.score
       ]
 
 main : Signal Element
 main = display <~ scene
+
+port title : String
+port title = "Eat 'Em All"
