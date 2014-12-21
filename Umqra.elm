@@ -213,7 +213,9 @@ updateGame update ({ game, camera } as scene) =
   in case update of
     Input direction ->
       let player'  = { player
-                     | dVelocity <- toFloat direction.y * playerdVelocity
+                     | dVelocity <- if
+                         | direction.y == -1 -> -playerdVelocity
+                         | otherwise         ->  playerdVelocity
                      , dAngle    <- toFloat direction.x * -playerdAngle
                      }
           game' = { game | player <- player' }
@@ -338,7 +340,7 @@ defaultPlayer =
   { x         = 0
   , y         = 0
   , velocity  = playerMinVelocity
-  , dVelocity = 0
+  , dVelocity = playerdVelocity
   , angle     = 0
   , dAngle    = 0
   , trail     = []
