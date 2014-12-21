@@ -55,12 +55,6 @@ playerdVelocity = 25 / second ^ 2
 playerdAngle : Float
 playerdAngle = pi / second
 
-dotEmergenceTime : Float
-dotEmergenceTime = 1 * second
-
-dotDyingTime : Float
-dotDyingTime = 1 * second
-
 playerMinRadius : Float
 playerMinRadius = 4
 
@@ -70,17 +64,26 @@ playerMaxRadius = 5
 playerBouncePeriod : Time
 playerBouncePeriod = 1 * second
 
-dotMinRadius : Float
-dotMinRadius = 2
+dotMaxScore : Score
+dotMaxScore = 10
 
-dotMaxRadius : Float
-dotMaxRadius = 4
+dotYoungRadius : Float
+dotYoungRadius = 5
+
+dotMatureRadius : Float
+dotMatureRadius = 3
 
 dotMinLifetime : Time
-dotMinLifetime = 1 * second
+dotMinLifetime = 5 * second
 
 dotMaxLifetime : Time
-dotMaxLifetime = 5 * second
+dotMaxLifetime = 15 * second
+
+dotEmergenceTime : Float
+dotEmergenceTime = 1 * second
+
+dotDyingTime : Float
+dotDyingTime = 1 * second
 
 dotMaxVelocity : Float
 dotMaxVelocity = 15 / second
@@ -111,9 +114,11 @@ type alias Player = Object
   , dAngle    : Float
   , trail     : List Point
   , age       : Int
-  , score     : Int
+  , score     : Score
   , radius    : Float
   }
+
+type alias Score = Int
 
 type alias Dot = Object
   { color    : Color
@@ -331,8 +336,13 @@ eatDots ({ player, dots } as game) =
         -- Eat a dot when the player covers its center
         distanceSquare player dot < player.radius ^ 2
       (eatenDots, dots') = List.partition playerEats dots
-      player' = { player | score <- player.score + List.length eatenDots }
+      score' = player.score + List.sum (List.map scoreDot eatenDots)
+      player' = { player | score <- score' }
   in { game | player <- player', dots <- dots' }
+
+scoreDot : Dot -> Score
+scoreDot dot = round <| linearScale 0 dot.lifetime
+                                    0 (toFloat dotMaxScore) dot.time
 
 updateTrail : Float -> Float -> Player -> Player
 updateTrail x y ({ trail } as player) =
@@ -379,13 +389,13 @@ display { game, camera, w, h } =
                |> Text.color Color.white
                |> Text.leftAligned
       dotForm dot = move (dot.x, dot.y) <| case dot.state of
-        Emerging -> circle dotMinRadius
+        Emerging -> circle dotYoungRadius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotEmergenceTime 0 1 dot.time)
         Ageing   -> circle (linearScale 0 dot.lifetime
-                                        dotMinRadius dotMaxRadius dot.time)
+                                        dotYoungRadius dotMatureRadius dot.time)
                     |> filled dot.color
-        Dying    -> circle dotMaxRadius
+        Dying    -> circle dotMatureRadius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotDyingTime 1 0 dot.time)
       scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
@@ -406,7 +416,8 @@ display { game, camera, w, h } =
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           "Age: " ++ toString player.age
-      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text "Arr"
+      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text <|
+          "Smaller dots give more points"
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text <|
           "Score: " ++ toString player.score
       ]
