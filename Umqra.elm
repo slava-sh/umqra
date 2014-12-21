@@ -25,9 +25,6 @@ gameFPS = 35
 agePS : Float
 agePS = 1 / 5
 
-maxDotAge : Int
-maxDotAge = 3
-
 trailsPS : Float
 trailsPS = 5
 
@@ -73,8 +70,17 @@ playerMaxRadius = 5
 playerBouncePeriod : Time
 playerBouncePeriod = 1 * second
 
-dotRadius : Float
-dotRadius = 3
+dotMinRadius : Float
+dotMinRadius = 2
+
+dotMaxRadius : Float
+dotMaxRadius = 4
+
+dotMinLifetime : Time
+dotMinLifetime = 1 * second
+
+dotMaxLifetime : Time
+dotMaxLifetime = 5 * second
 
 dotMaxVelocity : Float
 dotMaxVelocity = 15 / second
@@ -111,10 +117,9 @@ type alias Player = Object
 
 type alias Dot = Object
   { color    : Color
-  , age      : Int
-  , maxAge   : Int
   , state    : DotState
   , time     : Time
+  , lifetime : Time
   , velocity : Float
   , angle    : Float
   , dAngle   : Float
@@ -148,19 +153,19 @@ randomDot = Random.customGenerator <|
   Random.generate (Random.float -newDotX newDotX) `randomThen` \x ->
   Random.generate (Random.float -newDotY newDotY) `randomThen` \y ->
   Random.generate (randomElement dotColors)       `randomThen` \color ->
-  Random.generate (Random.int 1 maxDotAge)        `randomThen` \maxAge ->
   Random.generate (Random.float 0 dotMaxVelocity) `randomThen` \velocity ->
   Random.generate (Random.float (-pi) (pi))       `randomThen` \angle ->
+  Random.generate (Random.float dotMinLifetime dotMaxLifetime)
+    `randomThen` \lifetime ->
   Random.generate (Random.float -dotMaxdAngle dotMaxdAngle)
     `randomThen` \dAngle ->
   randomReturn
     { x        = x
     , y        = y
     , color    = color
-    , age      = 0
-    , maxAge   = maxAge
     , state    = Emerging
     , time     = 0
+    , lifetime = lifetime
     , velocity = velocity
     , angle    = angle
     , dAngle   = dAngle
@@ -245,10 +250,8 @@ updateGame update ({ game, camera } as scene) =
           game' = { game | dots <- dots', seed <- seed' }
       in { scene | game <- game' }
     Age ->
-      let updateAge obj = { obj | age <- obj.age + 1 }
-          player'       = updateAge player
-          dots'         = List.map updateAge dots
-          game' = { game | player <- player', dots <- dots' }
+      let player' = { player | age <- player.age + 1 }
+          game' = { game | player <- player' }
       in { scene | game <- game' }
     Delay dt ->
       let game' = game
@@ -283,7 +286,7 @@ updateDot dt dot =
 updateDotState : Dot -> Dot
 updateDotState dot = if
   | dot.state == Emerging && dot.time > dotEmergenceTime -> setState Ageing dot
-  | dot.state == Ageing && dot.age > dot.maxAge -> setState Dying dot
+  | dot.state == Ageing && dot.time > dot.lifetime -> setState Dying dot
   | otherwise -> dot
 
 updateDots : Time -> Game -> Game
@@ -376,12 +379,13 @@ display { game, camera, w, h } =
                |> Text.color Color.white
                |> Text.leftAligned
       dotForm dot = move (dot.x, dot.y) <| case dot.state of
-        Emerging -> circle dotRadius
+        Emerging -> circle dotMinRadius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotEmergenceTime 0 1 dot.time)
-        Ageing   -> circle dotRadius
+        Ageing   -> circle (linearScale 0 dot.lifetime
+                                        dotMinRadius dotMaxRadius dot.time)
                     |> filled dot.color
-        Dying    -> circle dotRadius
+        Dying    -> circle dotMaxRadius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotDyingTime 1 0 dot.time)
       scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
