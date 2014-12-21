@@ -143,64 +143,28 @@ updates = mergeMany
   , Delay         <~ fps gameFPS
   ]
 
-linearScale : Float -> Float -> Float -> Float -> Float -> Float
-linearScale oldMin oldMax newMin newMax x =
-  (newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin
-
-withProbability : Float
-               -> Random.Generator a
-               -> Random.Generator (Maybe a)
-withProbability p g = Random.customGenerator <| \seed ->
-  let (chance, seed') = Random.generate (Random.float 0 1) seed
-  in if
-    | p < chance -> (Nothing, seed')
-    | otherwise  -> let (x, seed'') = Random.generate g seed'
-                    in (Just x, seed'')
-
-fromJust : Maybe a -> a
-fromJust maybe = case maybe of
-  Just x -> x
-
-maybeToList : Maybe a -> List a
-maybeToList maybe = case maybe of
-  Just x  -> [x]
-  Nothing -> []
-
-{- The array should be non-empty -}
-randomElement : Array a -> Random.Generator a
-randomElement arr = Random.customGenerator <| \seed->
-    let (index, seed') =
-          Random.generate (Random.int 0 <| Array.length arr - 1) seed
-    in (fromJust <| Array.get index arr, seed)
-
-type alias RandomM a = Random.Seed -> (a, Random.Seed)
-
 randomDot : Random.Generator Dot
-randomDot = Random.customGenerator <| \seed ->
-  let andThen : RandomM a -> (a -> RandomM b) -> RandomM b
-      andThen m f = \seed -> let (x, seed') = m seed in f x seed'
-      return : a -> RandomM a
-      return x = \seed -> (x, seed)
-  in seed |>
-    Random.generate (Random.float -newDotX newDotX) `andThen` \x ->
-    Random.generate (Random.float -newDotY newDotY) `andThen` \y ->
-    Random.generate (randomElement dotColors) `andThen` \color ->
-    Random.generate (Random.int 1 maxDotAge) `andThen` \maxAge ->
-    Random.generate (Random.float 0 dotMaxVelocity) `andThen` \velocity ->
-    Random.generate (Random.float (-pi) (pi)) `andThen` \angle ->
-    Random.generate (Random.float -dotMaxdAngle dotMaxdAngle)
-      `andThen` \dAngle ->
-    return { x        = x
-           , y        = y
-           , color    = color
-           , age      = 0
-           , maxAge   = maxAge
-           , state    = Emerging
-           , time     = 0
-           , velocity = velocity
-           , angle    = angle
-           , dAngle   = dAngle
-           }
+randomDot = Random.customGenerator <|
+  Random.generate (Random.float -newDotX newDotX) `randomThen` \x ->
+  Random.generate (Random.float -newDotY newDotY) `randomThen` \y ->
+  Random.generate (randomElement dotColors)       `randomThen` \color ->
+  Random.generate (Random.int 1 maxDotAge)        `randomThen` \maxAge ->
+  Random.generate (Random.float 0 dotMaxVelocity) `randomThen` \velocity ->
+  Random.generate (Random.float (-pi) (pi))       `randomThen` \angle ->
+  Random.generate (Random.float -dotMaxdAngle dotMaxdAngle)
+    `randomThen` \dAngle ->
+  randomReturn
+    { x        = x
+    , y        = y
+    , color    = color
+    , age      = 0
+    , maxAge   = maxAge
+    , state    = Emerging
+    , time     = 0
+    , velocity = velocity
+    , angle    = angle
+    , dAngle   = dAngle
+    }
 
 type alias Camera = Object {}
 
@@ -316,10 +280,8 @@ updateDot dt dot =
 
 updateDotState : Dot -> Dot
 updateDotState dot = if
-  | dot.state == Emerging && dot.time > dotEmergenceTime ->
-      setState Ageing dot
-  | dot.state == Ageing && dot.age > dot.maxAge ->
-      setState Dying dot
+  | dot.state == Emerging && dot.time > dotEmergenceTime -> setState Ageing dot
+  | dot.state == Ageing && dot.age > dot.maxAge -> setState Dying dot
   | otherwise -> dot
 
 updateDots : Time -> Game -> Game
@@ -340,7 +302,7 @@ updatePlayer dt ({ player, targets } as game) =
             let target      = List.head targets
                 targetAngle = atan2 (target.y - player.y) (target.x - player.x)
                 deltaAngle  = targetAngle - player.angle
-                              |> normalize
+                              |> normalizeAngle
                               |> clamp (-playerdAngle * dt) (playerdAngle * dt)
             in player.angle + deltaAngle
       (dx, dy)  = fromPolar (velocity', angle')
@@ -354,11 +316,6 @@ updatePlayer dt ({ player, targets } as game) =
                       |> linearScale 1 -1 playerMinRadius playerMaxRadius
                   }
   in { game | player <- player' }
-
-normalize angle = if
-  | angle >  pi -> angle - 2 * pi
-  | angle < -pi -> angle + 2 * pi
-  | otherwise   -> angle
 
 distanceSquare : Object a -> Object b -> Float
 distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
@@ -391,11 +348,11 @@ defaultPlayer =
   }
 
 defaultGame : Game
-defaultGame =
+defaultGame = readSignal currentTime |> \time ->
   { player  = defaultPlayer
   , targets = []
   , dots    = []
-  , seed    = Random.initialSeed 499
+  , seed    = Random.initialSeed <| floor time
   , time    = 0
   }
 
