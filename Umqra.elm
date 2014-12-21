@@ -26,16 +26,16 @@ agePS : Float
 agePS = 1 / 5
 
 trailsPS : Float
-trailsPS = 5
+trailsPS = 10
+
+trailLength : Int
+trailLength = 15
 
 newDotsExpectedPS : Float
 newDotsExpectedPS = 2
 
 cameraFrameSize : Float
 cameraFrameSize = 300
-
-trailLength : Int
-trailLength = 20
 
 playerMinVelocity : Float
 playerMinVelocity = 25 / second
@@ -147,7 +147,6 @@ type Update
   = Input { x : Int, y : Int }
   | Targets (List Touch)
   | Window (Int, Int)
-  | Trail
   | NewDot
   | Age
   | Delay Time
@@ -157,7 +156,6 @@ updates = mergeMany
   [ Input         <~ Keyboard.arrows
   , Targets       <~ Touch.touches
   , Window        <~ Window.dimensions
-  , always Trail  <~ every (second / trailsPS)
   -- A new dot appears with the probability 1/2
   , always NewDot <~ every (second / newDotsExpectedPS / 2)
   , always Age    <~ every (second / agePS)
@@ -292,10 +290,6 @@ updateGame update ({ game, camera } as scene) =
           player'  = { player | dVelocity <- playerdVelocity }
           game' = { game | targets <- targets', player <- player' }
       in { scene | game <- game' }
-    Trail ->
-      let player' = updateTrail player.x player.y player
-          game' = { game | player <- player' }
-      in { scene | game <- game' }
     NewDot ->
       let (newDot, seed') = Random.generate
             (withProbability 0.5
@@ -381,16 +375,16 @@ updatePlayer dt ({ player, targets } as game) =
                       cos (2 * pi / playerBouncePeriod * game.time)
                       |> linearScale 1 -1 playerMinRadius playerMaxRadius
                   }
+                  |> updateTrail
   in { game | player <- player' }
 
-distanceSquare : Object a -> Object b -> Float
-distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
+distance : Object a -> Object b -> Float
+distance a b = sqrt <| (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
 
 eatDots : Game -> Game
 eatDots ({ player, dots } as game) =
   let playerEats dot = dot.state /= Dying &&
-        (let distanceToEat = player.radius + dot.radius - coverRadiusToEat
-         in distanceSquare player dot < distanceToEat ^ 2)
+        distance player dot < player.radius + dot.radius - coverRadiusToEat
       (eatenDots, dots') = List.partition playerEats dots
       score' = player.score + List.sum (List.map scoreDot eatenDots)
       player' = { player | score <- score' }
@@ -400,9 +394,14 @@ scoreDot : Dot -> Score
 scoreDot dot = round <| linearScale 0 dot.lifetime
                                     0 (toFloat dotMaxScore) dot.time
 
-updateTrail : Float -> Float -> Player -> Player
-updateTrail x y ({ trail } as player) =
-  { player | trail <- List.take trailLength <| { x = x, y = y } :: trail }
+updateTrail : Player -> Player
+updateTrail ({ trail } as player) =
+  let trail' = if
+        | List.isEmpty trail -> [{ x = player.x, y = player.y }]
+        | distance player (List.head trail) > player.velocity * second / trailsPS ->
+            List.take trailLength <| { x = player.x, y = player.y } :: trail
+        | otherwise -> trail
+  in { player | trail <- trail' }
 
 display : Scene -> Element
 display ({ game, camera } as scene) =
@@ -424,7 +423,7 @@ display ({ game, camera } as scene) =
         Dying    -> circle dot.radius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotDyingTime 1 0 dot.time)
-      scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
+      scaleTrail = linearScale 0 <| toFloat <| List.length player.trail
       trailForm i dot =
         circle (scaleTrail 2.5 1 <| toFloat i)
         |> filled Color.white
