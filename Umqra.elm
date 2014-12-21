@@ -247,7 +247,8 @@ updateGame update ({ game, camera } as scene) =
                           { x = toFloat x - halfW + camera.x
                           , y = halfH - toFloat y + camera.y
                           })
-          game' = { game | targets <- targets' }
+          player'  = { player | dVelocity <- playerdVelocity }
+          game' = { game | targets <- targets', player <- player' }
       in { scene | game <- game' }
     Trail ->
       let player' = updateTrail player.x player.y player
@@ -320,8 +321,12 @@ updatePlayer dt ({ player, targets } as game) =
       angle'    = if
         | List.isEmpty targets -> player.angle + player.dAngle * dt
         | otherwise            ->
-            let target = List.head targets
-            in toPolar (target.x - player.x, target.y - player.y) |> snd
+            let target      = List.head targets
+                targetAngle = atan2 (target.y - player.y) (target.x - player.x)
+                deltaAngle  = targetAngle - player.angle
+                              |> normalize
+                              |> clamp (-playerdAngle * dt) (playerdAngle * dt)
+            in player.angle + deltaAngle
       (dx, dy)  = fromPolar (velocity', angle')
       player'   = { player
                   | x        <- player.x + dx * dt
@@ -333,6 +338,11 @@ updatePlayer dt ({ player, targets } as game) =
                       |> linearScale 1 -1 playerMinRadius playerMaxRadius
                   }
   in { game | player <- player' }
+
+normalize angle = if
+  | angle >  pi -> angle - 2 * pi
+  | angle < -pi -> angle + 2 * pi
+  | otherwise   -> angle
 
 distanceSquare : Object a -> Object b -> Float
 distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
