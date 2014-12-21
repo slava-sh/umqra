@@ -91,6 +91,14 @@ dotMaxVelocity = 15 / second
 dotMaxdAngle : Float
 dotMaxdAngle = 2 * pi / second
 
+dotColors : Array Color
+dotColors = Array.fromList
+  [ Color.red
+  , Color.lightBlue
+  , Color.orange
+  , Color.lightGreen
+  ]
+
 type alias Game =
   { player  : Player
   , targets : List Point
@@ -153,6 +161,60 @@ updates = mergeMany
   , Delay         <~ fps gameFPS
   ]
 
+type alias Camera = Object {}
+
+type alias Scene =
+  { game   : Game
+  , camera : Camera
+  , w      : Int
+  , h      : Int
+  }
+
+scene : Signal Scene
+scene = foldp updateScene defaultScene updates
+
+defaultScene : Scene
+defaultScene = readSignal Window.dimensions |> \(w, h) ->
+  { game   = defaultGame
+  , camera = { x = 0, y = 0 }
+  , w      = w
+  , h      = h
+  }
+
+defaultGame : Game
+defaultGame = readSignal currentTime |> \time ->
+  { seed    = Random.initialSeed <| floor time
+  , player  = defaultPlayer
+  , dots    =
+      [ { x        = 100
+        , y        = 0
+        , color    = Color.green
+        , time     = 0
+        , lifetime = 10 * second
+        , state    = Emerging
+        , velocity = dotMaxVelocity
+        , angle    = 0
+        , dAngle   = 0
+        }
+      ]
+  , targets = []
+  , time    = 0
+  }
+
+defaultPlayer : Player
+defaultPlayer =
+  { x         = 0
+  , y         = 0
+  , velocity  = playerMinVelocity
+  , dVelocity = playerdVelocity
+  , angle     = 0
+  , dAngle    = 0
+  , trail     = []
+  , age       = 0
+  , score     = 0
+  , radius    = 0
+  }
+
 randomDot : Random.Generator Dot
 randomDot = Random.customGenerator <|
   Random.generate (Random.float -newDotX newDotX) `randomThen` \x ->
@@ -175,26 +237,6 @@ randomDot = Random.customGenerator <|
     , angle    = angle
     , dAngle   = dAngle
     }
-
-type alias Camera = Object {}
-
-type alias Scene =
-  { game   : Game
-  , camera : Camera
-  , w      : Int
-  , h      : Int
-  }
-
-scene : Signal Scene
-scene = foldp updateScene defaultScene updates
-
-defaultScene : Scene
-defaultScene = readSignal Window.dimensions |> \(w, h) ->
-  { game   = defaultGame
-  , camera = { x = 0, y = 0 }
-  , w      = w
-  , h      = h
-  }
 
 updateScene : Update -> Scene -> Scene
 updateScene update scene =
@@ -347,37 +389,6 @@ scoreDot dot = round <| linearScale 0 dot.lifetime
 updateTrail : Float -> Float -> Player -> Player
 updateTrail x y ({ trail } as player) =
   { player | trail <- List.take trailLength <| { x = x, y = y } :: trail }
-
-defaultPlayer : Player
-defaultPlayer =
-  { x         = 0
-  , y         = 0
-  , velocity  = playerMinVelocity
-  , dVelocity = playerdVelocity
-  , angle     = 0
-  , dAngle    = 0
-  , trail     = []
-  , age       = 0
-  , score     = 0
-  , radius    = 0
-  }
-
-defaultGame : Game
-defaultGame = readSignal currentTime |> \time ->
-  { player  = defaultPlayer
-  , targets = []
-  , dots    = []
-  , seed    = Random.initialSeed <| floor time
-  , time    = 0
-  }
-
-dotColors : Array Color
-dotColors = Array.fromList
-  [ Color.red
-  , Color.lightBlue
-  , Color.orange
-  , Color.lightGreen
-  ]
 
 display : Scene -> Element
 display { game, camera, w, h } =
