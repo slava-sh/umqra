@@ -408,6 +408,10 @@ display ({ game, camera } as scene) =
   let { player, dots, targets } = game
       w = floor scene.w
       h = floor scene.h
+      halfW = scene.w / 2
+      halfH = scene.h / 2
+      isVisible { x, y, radius } = abs x - radius < halfW
+                                && abs y - radius < halfH
       text s = Text.fromString s
                |> Text.typeface ["Optima", "Helvetica Neue"]
                |> Text.bold
@@ -434,7 +438,7 @@ display ({ game, camera } as scene) =
       [ spacer w h |> color Color.black
       , collage w h <| List.map (move (-camera.x, -camera.y)) <|
           List.indexedMap trailForm player.trail ++
-          List.map dotForm dots ++
+          List.map dotForm (List.filter isVisible dots) ++
           [ circle player.radius
             |> filled Color.white
             |> move (player.x, player.y)
