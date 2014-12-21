@@ -17,6 +17,8 @@ import Keyboard
 import Touch
 import Touch (Touch)
 
+import Utils (..)
+
 gameFPS : Int
 gameFPS = 35
 
@@ -122,7 +124,8 @@ type DotState = Emerging | Ageing | Dying
 
 type Update
   = Input { x : Int, y : Int }
-  | Targets (List Touch) (Int, Int)
+  | Targets (List Touch)
+  | Window (Int, Int)
   | Trail
   | NewDot
   | Age
@@ -131,7 +134,8 @@ type Update
 updates : Signal Update
 updates = mergeMany
   [ Input         <~ Keyboard.arrows
-  , Targets       <~ Touch.touches ~ Window.dimensions
+  , Targets       <~ Touch.touches
+  , Window        <~ Window.dimensions
   , always Trail  <~ every (second / trailsPS)
   -- A new dot appears with the probability 1/2
   , always NewDot <~ every (second / newDotsExpectedPS / 2)
@@ -203,19 +207,30 @@ type alias Camera = Object {}
 type alias Scene =
   { game   : Game
   , camera : Camera
+  , w      : Int
+  , h      : Int
   }
 
 scene : Signal Scene
 scene = foldp updateScene defaultScene updates
 
 defaultScene : Scene
-defaultScene =
+defaultScene = readSignal Window.dimensions |> \(w, h) ->
   { game   = defaultGame
   , camera = { x = 0, y = 0 }
+  , w      = w
+  , h      = h
   }
 
 updateScene : Update -> Scene -> Scene
-updateScene update = updateGame update >> updateCamera
+updateScene update scene =
+  let scene' = case update of
+        Window (w, h) -> { scene | w <- w, h <- h }
+        _             -> scene
+  in
+    scene'
+    |> updateGame update
+    |> updateCamera
 
 updateCamera : Scene -> Scene
 updateCamera ({ game, camera } as scene) =
@@ -239,9 +254,9 @@ updateGame update ({ game, camera } as scene) =
                      }
           game' = { game | player <- player' }
       in { scene | game <- game' }
-    Targets targets (w, h) ->
-      let halfW = toFloat w / 2
-          halfH = toFloat h / 2
+    Targets targets ->
+      let halfW = toFloat scene.w / 2
+          halfH = toFloat scene.h / 2
           targets' = targets
                      |> List.map (\{ x, y } ->
                           { x = toFloat x - halfW + camera.x
@@ -276,6 +291,7 @@ updateGame update ({ game, camera } as scene) =
                   |> updatePlayer dt
                   |> eatDots
       in { scene | game <- game' }
+    _ -> scene
 
 setState : a
         -> { obj | state : a, time : Time }
@@ -391,8 +407,8 @@ dotColors = Array.fromList
   , Color.lightGreen
   ]
 
-display : (Int, Int) -> Scene -> Element
-display (w, h) { game, camera } =
+display : Scene -> Element
+display { game, camera, w, h } =
   let { player, dots, targets } = game
       text s = Text.fromString s
                |> Text.typeface ["Optima", "Helvetica Neue"]
@@ -433,4 +449,4 @@ display (w, h) { game, camera } =
       ]
 
 main : Signal Element
-main = display <~ Window.dimensions ~ scene
+main = display <~ scene
