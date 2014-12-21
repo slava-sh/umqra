@@ -255,14 +255,18 @@ updateScene update scene =
 
 updateCamera : Scene -> Scene
 updateCamera ({ game, camera } as scene) =
-  let player = game.player
+  let { player, targets } = game
       halfFrame = cameraFrameSize / 2
       camera' =
         { camera
         | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
         , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
         }
-  in { scene | camera <- camera' }
+      targets' = targets |> List.map (\{x, y} -> { x = x - camera.x + camera'.x
+                                                 , y = y - camera.y + camera'.y
+                                                 })
+      game' = { game | targets <- targets' }
+  in { scene | camera <- camera', game <- game' }
 
 updateGame : Update -> Scene -> Scene
 updateGame update ({ game, camera } as scene) =
