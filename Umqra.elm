@@ -67,6 +67,9 @@ dotYoungRadius = 5
 dotMatureRadius : Float
 dotMatureRadius = 3
 
+coverRadiusToEat : Float
+coverRadiusToEat = 2
+
 dotMinLifetime : Time
 dotMinLifetime = 5 * second
 
@@ -130,6 +133,7 @@ type alias Dot = Object
   , velocity : Float
   , angle    : Float
   , dAngle   : Float
+  , radius   : Float
   }
 
 type DotState = Emerging | Ageing | Dying
@@ -189,6 +193,7 @@ defaultGame = readSignal currentTime |> \time ->
         , velocity = dotMaxVelocity
         , angle    = 0
         , dAngle   = 0
+        , radius   = 0
         }
       ]
   , targets = []
@@ -230,6 +235,7 @@ randomDot minX maxX minY maxY = Random.customGenerator <|
     , velocity = velocity
     , angle    = angle
     , dAngle   = dAngle
+    , radius   = 0
     }
 
 updateScene : Update -> Scene -> Scene
@@ -314,12 +320,18 @@ updateDot dt dot =
       x'       = dot.x + dx * dt
       y'       = dot.y + dy * dt
       angle'   = dot.angle + dot.dAngle * dt
+      radius'  = case dot.state of
+        Emerging -> dotYoungRadius
+        Ageing   -> linearScale 0 dot.lifetime
+                                dotYoungRadius dotMatureRadius time'
+        Dying    -> dotMatureRadius
   in
     { dot
-    | time  <- time'
-    , x     <- x'
-    , y     <- y'
-    , angle <- angle'
+    | time   <- time'
+    , x      <- x'
+    , y      <- y'
+    , angle  <- angle'
+    , radius <- radius'
     }
     |> updateDotState
 
@@ -368,8 +380,8 @@ distanceSquare a b = (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
 eatDots : Game -> Game
 eatDots ({ player, dots } as game) =
   let playerEats dot = dot.state /= Dying &&
-        -- Eat a dot when the player covers its center
-        distanceSquare player dot < player.radius ^ 2
+        (let distanceToEat = player.radius + dot.radius - coverRadiusToEat
+         in distanceSquare player dot < distanceToEat ^ 2)
       (eatenDots, dots') = List.partition playerEats dots
       score' = player.score + List.sum (List.map scoreDot eatenDots)
       player' = { player | score <- score' }
@@ -395,13 +407,12 @@ display ({ game, camera } as scene) =
                |> Text.color Color.white
                |> Text.leftAligned
       dotForm dot = move (dot.x, dot.y) <| case dot.state of
-        Emerging -> circle dotYoungRadius
+        Emerging -> circle dot.radius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotEmergenceTime 0 1 dot.time)
-        Ageing   -> circle (linearScale 0 dot.lifetime
-                                        dotYoungRadius dotMatureRadius dot.time)
+        Ageing   -> circle dot.radius
                     |> filled dot.color
-        Dying    -> circle dotMatureRadius
+        Dying    -> circle dot.radius
                     |> filled dot.color
                     |> alpha (linearScale 0 dotDyingTime 1 0 dot.time)
       scaleTrail = linearScale 0 <| toFloat (List.length player.trail) - 1
