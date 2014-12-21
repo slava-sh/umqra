@@ -410,8 +410,8 @@ display ({ game, camera } as scene) =
       h = floor scene.h
       halfW = scene.w / 2
       halfH = scene.h / 2
-      isVisible { x, y, radius } = abs x - radius < halfW
-                                && abs y - radius < halfH
+      isVisible { x, y, radius } = abs (x - camera.x) - radius < halfW
+                                && abs (y - camera.y) - radius < halfH
       text s = Text.fromString s
                |> Text.typeface ["Optima", "Helvetica Neue"]
                |> Text.bold
