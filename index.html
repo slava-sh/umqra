@@ -2004,7 +2004,7 @@ Elm.Main.make = function (_elm) {
                  }();
                case "Nothing": return _v0;}
             _U.badCase($moduleName,
-            "between lines 346 and 353");
+            "between lines 352 and 359");
          }();
       }();
    });
@@ -2017,12 +2017,13 @@ Elm.Main.make = function (_elm) {
          switch (touches.ctor)
          {case "::":
             return $Maybe.Just({_: {}
-                               ,x: $Basics.toFloat(touches._0.x)
-                               ,y: $Basics.toFloat(touches._0.y)});
+                               ,velocity: $List.isEmpty(touches._1) ? 1 : -1
+                               ,x: touches._0.x
+                               ,y: touches._0.y});
             case "[]":
             return $Maybe.Nothing;}
          _U.badCase($moduleName,
-         "between lines 182 and 184");
+         "between lines 182 and 190");
       }());
    };
    var Manual = function (a) {
@@ -2177,7 +2178,7 @@ Elm.Main.make = function (_elm) {
                case "Emerging":
                return dotYoungRadius;}
             _U.badCase($moduleName,
-            "between lines 364 and 369");
+            "between lines 370 and 375");
          }();
          var angle$ = dot.angle + dot.dAngle * dt;
          var $ = $Basics.fromPolar({ctor: "_Tuple2"
@@ -2230,7 +2231,7 @@ Elm.Main.make = function (_elm) {
             case "Emerging":
             return dotMinScore;}
          _U.badCase($moduleName,
-         "between lines 430 and 434");
+         "between lines 436 and 440");
       }();
    };
    var eatDots = function (_v13) {
@@ -2280,7 +2281,7 @@ Elm.Main.make = function (_elm) {
                           target.time);
                         case "Moving": return 1;}
                      _U.badCase($moduleName,
-                     "between lines 477 and 480");
+                     "between lines 483 and 486");
                   }();
                   return $Graphics$Collage.move({ctor: "_Tuple2"
                                                 ,_0: target.x
@@ -2310,7 +2311,7 @@ Elm.Main.make = function (_elm) {
                        1,
                        dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));}
                   _U.badCase($moduleName,
-                  "between lines 461 and 470");
+                  "between lines 467 and 476");
                }());
             };
             var text = function (s) {
@@ -2400,7 +2401,7 @@ Elm.Main.make = function (_elm) {
                                                                        0,
                                                                        1)(_v15.game.time - _v21._0) : 1)(text(_v21._2))) : $Maybe.Nothing;}
                                                                   _U.badCase($moduleName,
-                                                                  "between lines 501 and 511");
+                                                                  "between lines 507 and 517");
                                                                }();
                                                             };
                                                             return $Maybe.withDefault($Graphics$Element.empty)($Maybe.oneOf($List.map(timedText)(_L.fromArray([{ctor: "_Tuple3"
@@ -2414,7 +2415,7 @@ Elm.Main.make = function (_elm) {
                                                                                                                                                               ,{ctor: "_Tuple3"
                                                                                                                                                                ,_0: 10 * $Time.second
                                                                                                                                                                ,_1: 15 * $Time.second
-                                                                                                                                                               ,_2: "Hold &darr; to maneuver"}
+                                                                                                                                                               ,_2: $Utils.touchEnabled ? "Use two fingers to maneuver" : "Hold &darr; to maneuver"}
                                                                                                                                                               ,{ctor: "_Tuple3"
                                                                                                                                                                ,_0: 15 * $Time.second
                                                                                                                                                                ,_1: 18 * $Time.second
@@ -2474,7 +2475,7 @@ Elm.Main.make = function (_elm) {
                                  ,h: $Basics.toFloat(_v26._1)
                                  ,w: $Basics.toFloat(_v26._0)};}
          _U.badCase($moduleName,
-         "between lines 199 and 202");
+         "between lines 205 and 208");
       }();
    }($Utils.readSignal($Window.dimensions));
    var cameraFrameSize = 100;
@@ -2508,7 +2509,7 @@ Elm.Main.make = function (_elm) {
                                         ,target.y - _v30.camera.y + camera$.y]],
                        target);}
                   _U.badCase($moduleName,
-                  "between lines 283 and 289");
+                  "between lines 289 and 295");
                }();
             })(target);
             var game$ = _U.replace([["target"
@@ -2561,7 +2562,7 @@ Elm.Main.make = function (_elm) {
                   case "Nothing":
                   return _v35.player.angle + _v35.player.dAngle * dt;}
                _U.badCase($moduleName,
-               "between lines 396 and 404");
+               "between lines 402 and 410");
             }();
             var velocity$ = A2($Basics.clamp,
             playerMinVelocity,
@@ -2626,15 +2627,15 @@ Elm.Main.make = function (_elm) {
                          {case "Just":
                             return function () {
                                  var player$ = _U.replace([["dVelocity"
-                                                           ,playerdVelocity]],
+                                                           ,$Basics.toFloat(update._0._0._0.velocity) * playerdVelocity]],
                                  player);
                                  var halfH = _v39.h / 2;
                                  var halfW = _v39.w / 2;
                                  var target$ = $Maybe.Just({_: {}
                                                            ,state: Moving
                                                            ,time: 0
-                                                           ,x: update._0._0._0.x - halfW + _v39.camera.x
-                                                           ,y: halfH - update._0._0._0.y + _v39.camera.y});
+                                                           ,x: $Basics.toFloat(update._0._0._0.x) - halfW + _v39.camera.x
+                                                           ,y: halfH - $Basics.toFloat(update._0._0._0.y) + _v39.camera.y});
                                  var game$ = _U.replace([["target"
                                                          ,target$]
                                                         ,["player",player$]],
@@ -5208,8 +5209,11 @@ Elm.Native.MyUtils.make = function(localRuntime) {
         return signal.value;
     }
 
+    var touchEnabled = 'ontouchstart' in window;
+
     return localRuntime.Native.MyUtils.values = {
-        readSignal: readSignal
+        readSignal: readSignal,
+        touchEnabled: touchEnabled
     };
 };
 Elm.Native.Ports = {};
@@ -8321,7 +8325,7 @@ Elm.Utils.make = function (_elm) {
             case "Nothing":
             return _L.fromArray([]);}
          _U.badCase($moduleName,
-         "between lines 20 and 22");
+         "between lines 23 and 25");
       }();
    };
    var fromJust = function (maybe) {
@@ -8329,7 +8333,7 @@ Elm.Utils.make = function (_elm) {
          switch (maybe.ctor)
          {case "Just": return maybe._0;}
          _U.badCase($moduleName,
-         "between lines 16 and 17");
+         "between lines 19 and 20");
       }();
    };
    var randomElement = function (arr) {
@@ -8341,9 +8345,11 @@ Elm.Utils.make = function (_elm) {
          arr)));
       }));
    };
+   var touchEnabled = $Native$MyUtils.touchEnabled;
    var readSignal = $Native$MyUtils.readSignal;
    _elm.Utils.values = {_op: _op
                        ,readSignal: readSignal
+                       ,touchEnabled: touchEnabled
                        ,fromJust: fromJust
                        ,maybeToList: maybeToList
                        ,linearScale: linearScale
