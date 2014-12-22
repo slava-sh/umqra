@@ -291,10 +291,10 @@ updateGame update ({ game, camera } as scene) =
           game' = { game | targets <- targets', player <- player' }
       in { scene | game <- game' }
     NewDot ->
-      let (newDot, seed') = Random.generate
+      let (newDot, seed') = seed |> Random.generate
             (withProbability 0.5
               (randomDot (player.x - scene.w) (player.x + scene.w)
-                         (player.y - scene.h) (player.y + scene.h))) seed
+                         (player.y - scene.h) (player.y + scene.h)))
           dots' = maybeToList newDot ++ dots
           game' = { game | dots <- dots', seed <- seed' }
       in { scene | game <- game' }

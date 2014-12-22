@@ -40,19 +40,16 @@ randomThen : RandomM a -> (a -> RandomM b) -> RandomM b
 randomThen m f = \seed -> let (x, seed') = m seed in f x seed'
 
 withProbability : Float -> Random.Generator a -> Random.Generator (Maybe a)
-withProbability p g = Random.customGenerator <| \seed ->
-  let (chance, seed') = Random.generate (Random.float 0 1) seed
-  in if
-    | p < chance -> (Nothing, seed')
-    | otherwise  -> let (x, seed'') = Random.generate g seed'
-                    in (Just x, seed'')
+withProbability p g = Random.customGenerator <|
+  Random.generate (Random.float 0 1) `randomThen` \chance -> if
+    | p < chance -> randomReturn Nothing
+    | otherwise  -> Random.generate g `randomThen` \x -> randomReturn <| Just x
 
 {- The array should be non-empty -}
 randomElement : Array a -> Random.Generator a
-randomElement arr = Random.customGenerator <| \seed->
-    let (index, seed') =
-          Random.generate (Random.int 0 <| Array.length arr - 1) seed
-    in (fromJust <| Array.get index arr, seed)
+randomElement arr = Random.customGenerator <|
+  Random.generate (Random.int 0 <| Array.length arr - 1) `randomThen` \index ->
+  randomReturn <| fromJust <| Array.get index arr
 
 currentTime : Signal Time
 currentTime = fst <~ timestamp (constant ())
