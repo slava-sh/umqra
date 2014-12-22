@@ -1977,6 +1977,78 @@ Elm.Main.make = function (_elm) {
                         ,["time",0]],
       obj);
    });
+   var updateTime = F2(function (dt,
+   obj) {
+      return _U.replace([["time"
+                         ,obj.time + dt]],
+      obj);
+   });
+   var updateTarget = F2(function (dt,
+   _v0) {
+      return function () {
+         return function () {
+            var _v2 = _v0.target;
+            switch (_v2.ctor)
+            {case "Just":
+               return function () {
+                    var targetDistance = A2(distance,
+                    _v0.player,
+                    _v2._0);
+                    var target$ = _U.cmp(targetDistance,
+                    _v0.player.radius) < 0 ? $Maybe.Nothing : $Maybe.Just(A2(updateTime,
+                    dt,
+                    _v2._0));
+                    return _U.replace([["target"
+                                       ,target$]],
+                    _v0);
+                 }();
+               case "Nothing": return _v0;}
+            _U.badCase($moduleName,
+            "between lines 345 and 352");
+         }();
+      }();
+   });
+   var Automatic = function (a) {
+      return {ctor: "Automatic"
+             ,_0: a};
+   };
+   var handleTouches = function (touches) {
+      return Automatic(function () {
+         switch (touches.ctor)
+         {case "::":
+            return $Maybe.Just({_: {}
+                               ,x: $Basics.toFloat(touches._0.x)
+                               ,y: $Basics.toFloat(touches._0.y)});
+            case "[]":
+            return $Maybe.Nothing;}
+         _U.badCase($moduleName,
+         "between lines 180 and 182");
+      }());
+   };
+   var Manual = function (a) {
+      return {ctor: "Manual"
+             ,_0: a};
+   };
+   var handleArrows = function (_v7) {
+      return function () {
+         return Manual({_: {}
+                       ,angle: 0 - _v7.x
+                       ,velocity: _U.eq(_v7.y,
+                       -1) ? -1 : 1});
+      }();
+   };
+   var Delay = function (a) {
+      return {ctor: "Delay",_0: a};
+   };
+   var Age = {ctor: "Age"};
+   var NewDot = {ctor: "NewDot"};
+   var Window = function (a) {
+      return {ctor: "Window"
+             ,_0: a};
+   };
+   var Input = function (a) {
+      return {ctor: "Input",_0: a};
+   };
    var Scene = F4(function (a,
    b,
    c,
@@ -1987,43 +2059,18 @@ Elm.Main.make = function (_elm) {
              ,h: d
              ,w: c};
    });
-   var Delay = function (a) {
-      return {ctor: "Delay",_0: a};
-   };
-   var Age = {ctor: "Age"};
-   var NewDot = {ctor: "NewDot"};
-   var Window = function (a) {
-      return {ctor: "Window"
-             ,_0: a};
-   };
-   var Targets = function (a) {
-      return {ctor: "Targets"
-             ,_0: a};
-   };
-   var Input = function (a) {
-      return {ctor: "Input",_0: a};
-   };
    var Dying = {ctor: "Dying"};
    var Ageing = {ctor: "Ageing"};
    var Emerging = {ctor: "Emerging"};
+   var Timed = F2(function (a,b) {
+      return _U.insert("time",a,b);
+   });
    var Object = F3(function (a,
    b,
    c) {
       return _U.insert("y",
       b,
       _U.insert("x",a,c));
-   });
-   var Game = F5(function (a,
-   b,
-   c,
-   d,
-   e) {
-      return {_: {}
-             ,dots: c
-             ,player: a
-             ,seed: d
-             ,targets: b
-             ,time: e};
    });
    var dotColors = $Array.fromList(_L.fromArray([$Color.red
                                                 ,$Color.orange
@@ -2048,149 +2095,6 @@ Elm.Main.make = function (_elm) {
       dot.lifetime) > 0 ? A2(setState,
       Dying,
       dot) : dot;
-   };
-   var display = function (_v0) {
-      return function () {
-         return function () {
-            var dotForm = function (dot) {
-               return $Graphics$Collage.move({ctor: "_Tuple2"
-                                             ,_0: dot.x
-                                             ,_1: dot.y})(function () {
-                  var _v2 = dot.state;
-                  switch (_v2.ctor)
-                  {case "Ageing":
-                     return $Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius));
-                     case "Dying":
-                     return $Graphics$Collage.alpha(A5($Utils.linearScale,
-                       0,
-                       dotDyingTime,
-                       1,
-                       0,
-                       dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));
-                     case "Emerging":
-                     return $Graphics$Collage.alpha(A5($Utils.linearScale,
-                       0,
-                       dotEmergenceTime,
-                       0,
-                       1,
-                       dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));}
-                  _U.badCase($moduleName,
-                  "between lines 421 and 430");
-               }());
-            };
-            var text = function (s) {
-               return $Text.leftAligned($Text.color($Color.white)($Text.height(22)($Text.bold($Text.typeface(_L.fromArray(["Optima"
-                                                                                                                          ,"Helvetica Neue"]))($Text.fromString(s))))));
-            };
-            var halfH = _v0.h / 2;
-            var halfW = _v0.w / 2;
-            var isVisible = function (_v3) {
-               return function () {
-                  return _U.cmp($Basics.abs(_v3.x - _v0.camera.x) - _v3.radius,
-                  halfW) < 0 && _U.cmp($Basics.abs(_v3.y - _v0.camera.y) - _v3.radius,
-                  halfH) < 0;
-               }();
-            };
-            var h = $Basics.floor(_v0.h);
-            var w = $Basics.floor(_v0.w);
-            var $ = _v0.game,
-            player = $.player,
-            dots = $.dots,
-            targets = $.targets;
-            var scaleTrail = $Utils.linearScale(0)($Basics.toFloat($List.length(player.trail)));
-            var trailForm = F2(function (i,
-            dot) {
-               return $Graphics$Collage.move({ctor: "_Tuple2"
-                                             ,_0: dot.x
-                                             ,_1: dot.y})($Graphics$Collage.alpha(A2(scaleTrail,
-               1,
-               0)($Basics.toFloat(i)))($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(A2(scaleTrail,
-               2.5,
-               1)($Basics.toFloat(i))))));
-            });
-            return $Graphics$Element.layers(_L.fromArray([$Graphics$Element.color($Color.black)(A2($Graphics$Element.spacer,
-                                                         w,
-                                                         h))
-                                                         ,A2($Graphics$Collage.collage,
-                                                         w,
-                                                         h)($List.map($Graphics$Collage.move({ctor: "_Tuple2"
-                                                                                             ,_0: 0 - _v0.camera.x
-                                                                                             ,_1: 0 - _v0.camera.y}))(A2($Basics._op["++"],
-                                                         A2($List.indexedMap,
-                                                         trailForm,
-                                                         player.trail),
-                                                         A2($Basics._op["++"],
-                                                         A2($List.map,
-                                                         dotForm,
-                                                         A2($List.filter,
-                                                         isVisible,
-                                                         dots)),
-                                                         _L.fromArray([$Graphics$Collage.move({ctor: "_Tuple2"
-                                                                                              ,_0: player.x
-                                                                                              ,_1: player.y})($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(player.radius)))])))))
-                                                         ,A3($Graphics$Element.container,
-                                                         w,
-                                                         h,
-                                                         A2($Graphics$Element.topLeftAt,
-                                                         $Graphics$Element.absolute(10),
-                                                         $Graphics$Element.absolute(10)))(text(A2($Basics._op["++"],
-                                                         "Age: ",
-                                                         $Basics.toString(player.age))))
-                                                         ,A3($Graphics$Element.container,
-                                                         w,
-                                                         h,
-                                                         A2($Graphics$Element.midTopAt,
-                                                         $Graphics$Element.relative(0.5),
-                                                         $Graphics$Element.absolute(10)))(function () {
-                                                            var fadeTime = 1 / 4 * $Time.second;
-                                                            var timedText = function (_v5) {
-                                                               return function () {
-                                                                  switch (_v5.ctor)
-                                                                  {case "_Tuple3":
-                                                                     return _U.cmp(_v5._0,
-                                                                       _v0.game.time) < 0 && _U.cmp(_v0.game.time,
-                                                                       _v5._1) < 0 ? $Maybe.Just($Graphics$Element.opacity(_U.cmp(_v0.game.time,
-                                                                       _v5._1 - fadeTime) > 0 ? A4($Utils.linearScale,
-                                                                       fadeTime,
-                                                                       0,
-                                                                       1,
-                                                                       0)(_v5._1 - _v0.game.time) : _U.cmp(_v0.game.time,
-                                                                       _v5._0 + fadeTime) < 0 ? A4($Utils.linearScale,
-                                                                       0,
-                                                                       fadeTime,
-                                                                       0,
-                                                                       1)(_v0.game.time - _v5._0) : 1)(text(_v5._2))) : $Maybe.Nothing;}
-                                                                  _U.badCase($moduleName,
-                                                                  "between lines 450 and 460");
-                                                               }();
-                                                            };
-                                                            return $Maybe.withDefault($Graphics$Element.empty)($Maybe.oneOf($List.map(timedText)(_L.fromArray([{ctor: "_Tuple3"
-                                                                                                                                                               ,_0: 0 * $Time.second
-                                                                                                                                                               ,_1: 5 * $Time.second
-                                                                                                                                                               ,_2: "Eat dots to score points"}
-                                                                                                                                                              ,{ctor: "_Tuple3"
-                                                                                                                                                               ,_0: 5 * $Time.second
-                                                                                                                                                               ,_1: 10 * $Time.second
-                                                                                                                                                               ,_2: "Smaller dots give you more points"}
-                                                                                                                                                              ,{ctor: "_Tuple3"
-                                                                                                                                                               ,_0: 10 * $Time.second
-                                                                                                                                                               ,_1: 15 * $Time.second
-                                                                                                                                                               ,_2: "Hold &darr; to maneuver"}
-                                                                                                                                                              ,{ctor: "_Tuple3"
-                                                                                                                                                               ,_0: 15 * $Time.second
-                                                                                                                                                               ,_1: 18 * $Time.second
-                                                                                                                                                               ,_2: "Enjoy!"}]))));
-                                                         }())
-                                                         ,A3($Graphics$Element.container,
-                                                         w,
-                                                         h,
-                                                         A2($Graphics$Element.topRightAt,
-                                                         $Graphics$Element.absolute(10),
-                                                         $Graphics$Element.absolute(10)))(text(A2($Basics._op["++"],
-                                                         "Score: ",
-                                                         $Basics.toString(player.score))))]));
-         }();
-      }();
    };
    var dotMaxLifetime = 15 * $Time.second;
    var dotMinLifetime = 5 * $Time.second;
@@ -2256,25 +2160,24 @@ Elm.Main.make = function (_elm) {
    var updateDot = F2(function (dt,
    dot) {
       return function () {
-         var angle$ = dot.angle + dot.dAngle * dt;
-         var time$ = dot.time + dt;
          var radius$ = function () {
-            var _v10 = dot.state;
-            switch (_v10.ctor)
+            var _v9 = dot.state;
+            switch (_v9.ctor)
             {case "Ageing":
                return A5($Utils.linearScale,
                  0,
                  dot.lifetime,
                  dotYoungRadius,
                  dotMatureRadius,
-                 time$);
+                 dot.time);
                case "Dying":
                return dotMatureRadius;
                case "Emerging":
                return dotYoungRadius;}
             _U.badCase($moduleName,
-            "between lines 326 and 331");
+            "between lines 363 and 368");
          }();
+         var angle$ = dot.angle + dot.dAngle * dt;
          var $ = $Basics.fromPolar({ctor: "_Tuple2"
                                    ,_0: dot.velocity
                                    ,_1: dot.angle}),
@@ -2282,9 +2185,8 @@ Elm.Main.make = function (_elm) {
          dy = $._1;
          var x$ = dot.x + dx * dt;
          var y$ = dot.y + dy * dt;
-         return updateDotState(_U.replace([["time"
-                                           ,time$]
-                                          ,["x",x$]
+         return updateDotState(_U.replace([["x"
+                                           ,x$]
                                           ,["y",y$]
                                           ,["angle",angle$]
                                           ,["radius",radius$]],
@@ -2292,35 +2194,48 @@ Elm.Main.make = function (_elm) {
       }();
    });
    var updateDots = F2(function (dt,
-   _v11) {
+   _v10) {
       return function () {
          return function () {
             var dots$ = $List.filter(function (dot) {
                return $Basics.not(_U.eq(dot.state,
                Dying) && _U.cmp(dot.time,
                dotDyingTime) > 0);
-            })($List.map(updateDot(dt))(_v11.dots));
+            })($List.map(function ($) {
+               return updateDot(dt)(updateTime(dt)($));
+            })(_v10.dots));
             return _U.replace([["dots"
                                ,dots$]],
-            _v11);
+            _v10);
          }();
       }();
    });
    var dotMaxScore = 10;
+   var dotMinScore = 1;
    var scoreDot = function (dot) {
-      return $Basics.round(A5($Utils.linearScale,
-      0,
-      dot.lifetime,
-      0,
-      $Basics.toFloat(dotMaxScore),
-      dot.time));
+      return function () {
+         var _v12 = dot.state;
+         switch (_v12.ctor)
+         {case "Ageing":
+            return $Basics.round(A5($Utils.linearScale,
+              0,
+              dot.lifetime,
+              $Basics.toFloat(dotMinScore),
+              $Basics.toFloat(dotMaxScore),
+              dot.time));
+            case "Dying":
+            return dotMaxScore;
+            case "Emerging":
+            return dotMinScore;}
+         _U.badCase($moduleName,
+         "between lines 429 and 433");
+      }();
    };
    var eatDots = function (_v13) {
       return function () {
          return function () {
             var playerEats = function (dot) {
-               return !_U.eq(dot.state,
-               Dying) && _U.cmp(A2(distance,
+               return _U.cmp(A2(distance,
                _v13.player,
                dot),
                _v13.player.radius + dot.radius - coverRadiusToEat) < 0;
@@ -2346,6 +2261,158 @@ Elm.Main.make = function (_elm) {
    var playerBouncePeriod = 1 * $Time.second;
    var playerMaxRadius = 5;
    var playerMinRadius = 4;
+   var display = function (_v15) {
+      return function () {
+         return function () {
+            var targetForm = function (target) {
+               return $Graphics$Collage.move({ctor: "_Tuple2"
+                                             ,_0: target.x
+                                             ,_1: target.y})($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(playerMinRadius)));
+            };
+            var dotForm = function (dot) {
+               return $Graphics$Collage.move({ctor: "_Tuple2"
+                                             ,_0: dot.x
+                                             ,_1: dot.y})(function () {
+                  var _v17 = dot.state;
+                  switch (_v17.ctor)
+                  {case "Ageing":
+                     return $Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius));
+                     case "Dying":
+                     return $Graphics$Collage.alpha(A5($Utils.linearScale,
+                       0,
+                       dotDyingTime,
+                       1,
+                       0,
+                       dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));
+                     case "Emerging":
+                     return $Graphics$Collage.alpha(A5($Utils.linearScale,
+                       0,
+                       dotEmergenceTime,
+                       0,
+                       1,
+                       dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));}
+                  _U.badCase($moduleName,
+                  "between lines 460 and 469");
+               }());
+            };
+            var text = function (s) {
+               return $Text.leftAligned($Text.color($Color.white)($Text.height(22)($Text.bold($Text.typeface(_L.fromArray(["Optima"
+                                                                                                                          ,"Helvetica Neue"]))($Text.fromString(s))))));
+            };
+            var halfH = _v15.h / 2;
+            var halfW = _v15.w / 2;
+            var isVisible = function (_v18) {
+               return function () {
+                  return _U.cmp($Basics.abs(_v18.x - _v15.camera.x) - _v18.radius,
+                  halfW) < 0 && _U.cmp($Basics.abs(_v18.y - _v15.camera.y) - _v18.radius,
+                  halfH) < 0;
+               }();
+            };
+            var h = $Basics.floor(_v15.h);
+            var w = $Basics.floor(_v15.w);
+            var $ = _v15.game,
+            player = $.player,
+            dots = $.dots;
+            var scaleTrail = $Utils.linearScale(0)($Basics.toFloat($List.length(player.trail)));
+            var trailForm = F2(function (i,
+            dot) {
+               return $Graphics$Collage.move({ctor: "_Tuple2"
+                                             ,_0: dot.x
+                                             ,_1: dot.y})($Graphics$Collage.alpha(A2(scaleTrail,
+               1,
+               0)($Basics.toFloat(i)))($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(A2(scaleTrail,
+               2.5,
+               1)($Basics.toFloat(i))))));
+            });
+            var playerForm = $Graphics$Collage.move({ctor: "_Tuple2"
+                                                    ,_0: player.x
+                                                    ,_1: player.y})($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(player.radius)));
+            return $Graphics$Element.layers(_L.fromArray([$Graphics$Element.color($Color.black)(A2($Graphics$Element.spacer,
+                                                         w,
+                                                         h))
+                                                         ,A2($Graphics$Collage.collage,
+                                                         w,
+                                                         h)($List.map($Graphics$Collage.move({ctor: "_Tuple2"
+                                                                                             ,_0: 0 - _v15.camera.x
+                                                                                             ,_1: 0 - _v15.camera.y}))(A2($Basics._op["++"],
+                                                         A2($List.indexedMap,
+                                                         trailForm,
+                                                         player.trail),
+                                                         A2($Basics._op["++"],
+                                                         A2($List.map,
+                                                         dotForm,
+                                                         A2($List.filter,
+                                                         isVisible,
+                                                         dots)),
+                                                         A2($Basics._op["++"],
+                                                         _L.fromArray([playerForm]),
+                                                         A2($List.map,
+                                                         targetForm,
+                                                         $Utils.maybeToList(_v15.game.target)))))))
+                                                         ,A3($Graphics$Element.container,
+                                                         w,
+                                                         h,
+                                                         A2($Graphics$Element.topLeftAt,
+                                                         $Graphics$Element.absolute(10),
+                                                         $Graphics$Element.absolute(10)))(text(A2($Basics._op["++"],
+                                                         "Age: ",
+                                                         $Basics.toString(player.age))))
+                                                         ,A3($Graphics$Element.container,
+                                                         w,
+                                                         h,
+                                                         A2($Graphics$Element.midTopAt,
+                                                         $Graphics$Element.relative(0.5),
+                                                         $Graphics$Element.absolute(10)))(function () {
+                                                            var fadeTime = 1 / 4 * $Time.second;
+                                                            var timedText = function (_v20) {
+                                                               return function () {
+                                                                  switch (_v20.ctor)
+                                                                  {case "_Tuple3":
+                                                                     return _U.cmp(_v20._0,
+                                                                       _v15.game.time) < 0 && _U.cmp(_v15.game.time,
+                                                                       _v20._1) < 0 ? $Maybe.Just($Graphics$Element.opacity(_U.cmp(_v15.game.time,
+                                                                       _v20._1 - fadeTime) > 0 ? A4($Utils.linearScale,
+                                                                       fadeTime,
+                                                                       0,
+                                                                       1,
+                                                                       0)(_v20._1 - _v15.game.time) : _U.cmp(_v15.game.time,
+                                                                       _v20._0 + fadeTime) < 0 ? A4($Utils.linearScale,
+                                                                       0,
+                                                                       fadeTime,
+                                                                       0,
+                                                                       1)(_v15.game.time - _v20._0) : 1)(text(_v20._2))) : $Maybe.Nothing;}
+                                                                  _U.badCase($moduleName,
+                                                                  "between lines 495 and 505");
+                                                               }();
+                                                            };
+                                                            return $Maybe.withDefault($Graphics$Element.empty)($Maybe.oneOf($List.map(timedText)(_L.fromArray([{ctor: "_Tuple3"
+                                                                                                                                                               ,_0: 0 * $Time.second
+                                                                                                                                                               ,_1: 5 * $Time.second
+                                                                                                                                                               ,_2: "Eat dots to score points"}
+                                                                                                                                                              ,{ctor: "_Tuple3"
+                                                                                                                                                               ,_0: 5 * $Time.second
+                                                                                                                                                               ,_1: 10 * $Time.second
+                                                                                                                                                               ,_2: "Smaller dots give you more points"}
+                                                                                                                                                              ,{ctor: "_Tuple3"
+                                                                                                                                                               ,_0: 10 * $Time.second
+                                                                                                                                                               ,_1: 15 * $Time.second
+                                                                                                                                                               ,_2: "Hold &darr; to maneuver"}
+                                                                                                                                                              ,{ctor: "_Tuple3"
+                                                                                                                                                               ,_0: 15 * $Time.second
+                                                                                                                                                               ,_1: 18 * $Time.second
+                                                                                                                                                               ,_2: "Enjoy!"}]))));
+                                                         }())
+                                                         ,A3($Graphics$Element.container,
+                                                         w,
+                                                         h,
+                                                         A2($Graphics$Element.topRightAt,
+                                                         $Graphics$Element.absolute(10),
+                                                         $Graphics$Element.absolute(10)))(text(A2($Basics._op["++"],
+                                                         "Score: ",
+                                                         $Basics.toString(player.score))))]));
+         }();
+      }();
+   };
    var playerdAngle = $Basics.pi / $Time.second;
    var playerdVelocity = 25 / Math.pow($Time.second,
    2);
@@ -2368,7 +2435,7 @@ Elm.Main.make = function (_elm) {
                                   ,angle: 0
                                   ,color: $Color.green
                                   ,dAngle: 0
-                                  ,lifetime: 10 * $Time.second
+                                  ,lifetime: 50 * $Time.second
                                   ,radius: 0
                                   ,state: Emerging
                                   ,time: 0
@@ -2377,102 +2444,110 @@ Elm.Main.make = function (_elm) {
                                   ,y: 0}])
              ,player: defaultPlayer
              ,seed: $Random.initialSeed($Basics.floor(time))
-             ,targets: _L.fromArray([])
+             ,target: $Maybe.Nothing
              ,time: 0};
    }($Utils.readSignal($Utils.currentTime));
-   var defaultScene = function (_v15) {
+   var defaultScene = function (_v25) {
       return function () {
-         switch (_v15.ctor)
+         switch (_v25.ctor)
          {case "_Tuple2": return {_: {}
                                  ,camera: {_: {},x: 0,y: 0}
                                  ,game: defaultGame
-                                 ,h: $Basics.toFloat(_v15._1)
-                                 ,w: $Basics.toFloat(_v15._0)};}
+                                 ,h: $Basics.toFloat(_v25._1)
+                                 ,w: $Basics.toFloat(_v25._0)};}
          _U.badCase($moduleName,
-         "between lines 179 and 182");
+         "between lines 197 and 200");
       }();
    }($Utils.readSignal($Window.dimensions));
    var cameraFrameSize = 100;
-   var updateCamera = function (_v19) {
+   var updateCamera = function (_v29) {
       return function () {
          return function () {
             var halfFrame = cameraFrameSize / 2;
-            var $ = _v19.game,
+            var $ = _v29.game,
             player = $.player,
-            targets = $.targets;
+            target = $.target;
             var camera$ = _U.replace([["x"
                                       ,A3($Basics.clamp,
                                       player.x - halfFrame,
                                       player.x + halfFrame,
-                                      _v19.camera.x)]
+                                      _v29.camera.x)]
                                      ,["y"
                                       ,A3($Basics.clamp,
                                       player.y - halfFrame,
                                       player.y + halfFrame,
-                                      _v19.camera.y)]],
-            _v19.camera);
-            var targets$ = $List.map(function (_v21) {
-               return function () {
-                  return {_: {}
-                         ,x: _v21.x - _v19.camera.x + camera$.x
-                         ,y: _v21.y - _v19.camera.y + camera$.y};
-               }();
-            })(targets);
-            var game$ = _U.replace([["targets"
-                                    ,targets$]],
-            _v19.game);
+                                      _v29.camera.y)]],
+            _v29.camera);
+            var target$ = $Maybe.map(function (target) {
+               return target.isActive ? _U.replace([["x"
+                                                    ,target.x - _v29.camera.x + camera$.x]
+                                                   ,["y"
+                                                    ,target.y - _v29.camera.y + camera$.y]],
+               target) : target;
+            })(target);
+            var game$ = _U.replace([["target"
+                                    ,target$]],
+            _v29.game);
             return _U.replace([["camera"
                                ,camera$]
                               ,["game",game$]],
-            _v19);
+            _v29);
          }();
       }();
    };
    var newDotsExpectedPS = 2;
    var trailLength = 15;
    var trailsPS = 10;
-   var updateTrail = function (_v23) {
+   var updateTrail = function (_v31) {
       return function () {
          return function () {
-            var trail$ = $List.isEmpty(_v23.trail) ? _L.fromArray([{_: {}
-                                                                   ,x: _v23.x
-                                                                   ,y: _v23.y}]) : _U.cmp(A2(distance,
-            _v23,
-            $List.head(_v23.trail)),
-            _v23.velocity * $Time.second / trailsPS) > 0 ? $List.take(trailLength)(A2($List._op["::"],
-            {_: {},x: _v23.x,y: _v23.y},
-            _v23.trail)) : _v23.trail;
+            var trail$ = $List.isEmpty(_v31.trail) ? _L.fromArray([{_: {}
+                                                                   ,x: _v31.x
+                                                                   ,y: _v31.y}]) : _U.cmp(A2(distance,
+            _v31,
+            $List.head(_v31.trail)),
+            _v31.velocity * $Time.second / trailsPS) > 0 ? $List.take(trailLength)(A2($List._op["::"],
+            {_: {},x: _v31.x,y: _v31.y},
+            _v31.trail)) : _v31.trail;
             return _U.replace([["trail"
                                ,trail$]],
-            _v23);
+            _v31);
          }();
       }();
    };
    var updatePlayer = F2(function (dt,
-   _v25) {
+   _v33) {
       return function () {
          return function () {
-            var angle$ = $List.isEmpty(_v25.targets) ? _v25.player.angle + _v25.player.dAngle * dt : function () {
-               var target = $List.head(_v25.targets);
-               var targetAngle = A2($Basics.atan2,
-               target.y - _v25.player.y,
-               target.x - _v25.player.x);
-               var deltaAngle = A2($Basics.clamp,
-               (0 - playerdAngle) * dt,
-               playerdAngle * dt)($Utils.normalizeAngle(targetAngle - _v25.player.angle));
-               return _v25.player.angle + deltaAngle;
+            var angle$ = function () {
+               var _v35 = _v33.target;
+               switch (_v35.ctor)
+               {case "Just":
+                  return function () {
+                       var targetAngle = A2($Basics.atan2,
+                       _v35._0.y - _v33.player.y,
+                       _v35._0.x - _v33.player.x);
+                       var deltaAngle = A2($Basics.clamp,
+                       (0 - playerdAngle) * dt,
+                       playerdAngle * dt)($Utils.normalizeAngle(targetAngle - _v33.player.angle));
+                       return _v33.player.angle + deltaAngle;
+                    }();
+                  case "Nothing":
+                  return _v33.player.angle + _v33.player.dAngle * dt;}
+               _U.badCase($moduleName,
+               "between lines 395 and 403");
             }();
             var velocity$ = A2($Basics.clamp,
             playerMinVelocity,
-            playerMaxVelocity)(_v25.player.velocity + _v25.player.dVelocity * dt);
+            playerMaxVelocity)(_v33.player.velocity + _v33.player.dVelocity * dt);
             var $ = $Basics.fromPolar({ctor: "_Tuple2"
                                       ,_0: velocity$
                                       ,_1: angle$}),
             dx = $._0,
             dy = $._1;
             var player$ = updateTrail(_U.replace([["x"
-                                                  ,_v25.player.x + dx * dt]
-                                                 ,["y",_v25.player.y + dy * dt]
+                                                  ,_v33.player.x + dx * dt]
+                                                 ,["y",_v33.player.y + dy * dt]
                                                  ,["velocity",velocity$]
                                                  ,["angle",angle$]
                                                  ,["radius"
@@ -2480,21 +2555,22 @@ Elm.Main.make = function (_elm) {
                                                   1,
                                                   -1,
                                                   playerMinRadius,
-                                                  playerMaxRadius)($Basics.cos(2 * $Basics.pi / playerBouncePeriod * _v25.time))]],
-            _v25.player));
+                                                  playerMaxRadius)($Basics.cos(2 * $Basics.pi / playerBouncePeriod * _v33.time))]],
+            _v33.player));
             return _U.replace([["player"
                                ,player$]],
-            _v25);
+            _v33);
          }();
       }();
    });
    var updateGame = F2(function (update,
-   _v27) {
+   _v37) {
       return function () {
          return function () {
-            var $ = _v27.game,
+            var $ = _v37.game,
             player = $.player,
             dots = $.dots,
+            target = $.target,
             seed = $.seed;
             return function () {
                switch (update.ctor)
@@ -2505,48 +2581,83 @@ Elm.Main.make = function (_elm) {
                        player);
                        var game$ = _U.replace([["player"
                                                ,player$]],
-                       _v27.game);
+                       _v37.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v27);
+                       _v37);
                     }();
                   case "Delay":
                   return function () {
-                       var game$ = function (game) {
-                          return eatDots(updatePlayer(update._0)(updateDots(update._0)(_U.replace([["time"
-                                                                                                   ,game.time + update._0]],
-                          game))));
-                       }(_v27.game);
+                       var game$ = eatDots(updateTarget(update._0)(updatePlayer(update._0)(updateDots(update._0)(updateTime(update._0)(_v37.game)))));
                        return _U.replace([["game"
                                           ,game$]],
-                       _v27);
+                       _v37);
                     }();
                   case "Input":
-                  return function () {
-                       var player$ = _U.replace([["dVelocity"
-                                                 ,_U.eq(update._0.y,
-                                                 -1) ? 0 - playerdVelocity : playerdVelocity]
-                                                ,["dAngle"
-                                                 ,$Basics.toFloat(update._0.x) * (0 - playerdAngle)]],
-                       player);
-                       var game$ = _U.replace([["player"
-                                               ,player$]],
-                       _v27.game);
-                       return _U.replace([["game"
-                                          ,game$]],
-                       _v27);
-                    }();
+                  switch (update._0.ctor)
+                    {case "Automatic":
+                       switch (update._0._0.ctor)
+                         {case "Just":
+                            return function () {
+                                 var player$ = _U.replace([["dVelocity"
+                                                           ,playerdVelocity]],
+                                 player);
+                                 var halfH = _v37.h / 2;
+                                 var halfW = _v37.w / 2;
+                                 var target$ = $Maybe.Just({_: {}
+                                                           ,isActive: true
+                                                           ,time: 0
+                                                           ,x: update._0._0._0.x - halfW + _v37.camera.x
+                                                           ,y: halfH - update._0._0._0.y + _v37.camera.y});
+                                 var game$ = _U.replace([["target"
+                                                         ,target$]
+                                                        ,["player",player$]],
+                                 _v37.game);
+                                 return _U.replace([["game"
+                                                    ,game$]],
+                                 _v37);
+                              }();
+                            case "Nothing":
+                            return function () {
+                                 var target$ = $Maybe.map(function (target) {
+                                    return _U.replace([["isActive"
+                                                       ,false]],
+                                    target);
+                                 })(target);
+                                 var game$ = _U.replace([["target"
+                                                         ,target$]],
+                                 _v37.game);
+                                 return _U.replace([["game"
+                                                    ,game$]],
+                                 _v37);
+                              }();}
+                         break;
+                       case "Manual":
+                       return function () {
+                            var player$ = _U.replace([["dVelocity"
+                                                      ,$Basics.toFloat(update._0._0.velocity) * playerdVelocity]
+                                                     ,["dAngle"
+                                                      ,$Basics.toFloat(update._0._0.angle) * playerdAngle]],
+                            player);
+                            var target$ = $Maybe.Nothing;
+                            var game$ = _U.replace([["player"
+                                                    ,player$]
+                                                   ,["target",target$]],
+                            _v37.game);
+                            return _U.replace([["game"
+                                               ,game$]],
+                            _v37);
+                         }();}
+                    break;
                   case "NewDot":
                   return function () {
-                       var $ = A2($Random.generate,
-                       A2($Utils.withProbability,
+                       var $ = $Random.generate(A2($Utils.withProbability,
                        0.5,
                        A4(randomDot,
-                       player.x - _v27.w,
-                       player.x + _v27.w,
-                       player.y - _v27.h,
-                       player.y + _v27.h)),
-                       seed),
+                       player.x - _v37.w,
+                       player.x + _v37.w,
+                       player.y - _v37.h,
+                       player.y + _v37.h)))(seed),
                        newDot = $._0,
                        seed$ = $._1;
                        var dots$ = A2($Basics._op["++"],
@@ -2555,34 +2666,12 @@ Elm.Main.make = function (_elm) {
                        var game$ = _U.replace([["dots"
                                                ,dots$]
                                               ,["seed",seed$]],
-                       _v27.game);
+                       _v37.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v27);
-                    }();
-                  case "Targets":
-                  return function () {
-                       var player$ = _U.replace([["dVelocity"
-                                                 ,playerdVelocity]],
-                       player);
-                       var halfH = _v27.h / 2;
-                       var halfW = _v27.w / 2;
-                       var targets$ = $List.map(function (_v33) {
-                          return function () {
-                             return {_: {}
-                                    ,x: $Basics.toFloat(_v33.x) - halfW + _v27.camera.x
-                                    ,y: halfH - $Basics.toFloat(_v33.y) + _v27.camera.y};
-                          }();
-                       })(update._0);
-                       var game$ = _U.replace([["targets"
-                                               ,targets$]
-                                              ,["player",player$]],
-                       _v27.game);
-                       return _U.replace([["game"
-                                          ,game$]],
-                       _v27);
+                       _v37);
                     }();}
-               return _v27;
+               return _v37;
             }();
          }();
       }();
@@ -2610,10 +2699,13 @@ Elm.Main.make = function (_elm) {
    var gameFPS = 35;
    var updates = $Signal.mergeMany(_L.fromArray([A2($Signal._op["<~"],
                                                 Input,
-                                                $Keyboard.arrows)
-                                                ,A2($Signal._op["<~"],
-                                                Targets,
-                                                $Touch.touches)
+                                                A2($Signal.merge,
+                                                A2($Signal._op["<~"],
+                                                handleTouches,
+                                                $Touch.touches),
+                                                $Signal.dropRepeats(A2($Signal._op["<~"],
+                                                handleArrows,
+                                                $Keyboard.arrows))))
                                                 ,A2($Signal._op["<~"],
                                                 Window,
                                                 $Window.dimensions)
@@ -2647,6 +2739,7 @@ Elm.Main.make = function (_elm) {
                       ,playerMinRadius: playerMinRadius
                       ,playerMaxRadius: playerMaxRadius
                       ,playerBouncePeriod: playerBouncePeriod
+                      ,dotMinScore: dotMinScore
                       ,dotMaxScore: dotMaxScore
                       ,dotYoungRadius: dotYoungRadius
                       ,dotMatureRadius: dotMatureRadius
@@ -2658,19 +2751,22 @@ Elm.Main.make = function (_elm) {
                       ,dotMaxVelocity: dotMaxVelocity
                       ,dotMaxdAngle: dotMaxdAngle
                       ,dotColors: dotColors
-                      ,Game: Game
                       ,Object: Object
+                      ,Timed: Timed
                       ,Emerging: Emerging
                       ,Ageing: Ageing
                       ,Dying: Dying
+                      ,Scene: Scene
                       ,Input: Input
-                      ,Targets: Targets
                       ,Window: Window
                       ,NewDot: NewDot
                       ,Age: Age
                       ,Delay: Delay
+                      ,Manual: Manual
+                      ,Automatic: Automatic
                       ,updates: updates
-                      ,Scene: Scene
+                      ,handleTouches: handleTouches
+                      ,handleArrows: handleArrows
                       ,scene: scene
                       ,defaultScene: defaultScene
                       ,defaultGame: defaultGame
@@ -2679,6 +2775,8 @@ Elm.Main.make = function (_elm) {
                       ,updateScene: updateScene
                       ,updateCamera: updateCamera
                       ,updateGame: updateGame
+                      ,updateTime: updateTime
+                      ,updateTarget: updateTarget
                       ,setState: setState
                       ,updateDot: updateDot
                       ,updateDotState: updateDotState
@@ -8142,31 +8240,6 @@ Elm.Utils.make = function (_elm) {
    var currentTime = A2($Signal._op["<~"],
    $Basics.fst,
    $Time.timestamp($Signal.constant({ctor: "_Tuple0"})));
-   var withProbability = F2(function (p,
-   g) {
-      return $Random.customGenerator(function (seed) {
-         return function () {
-            var $ = A2($Random.generate,
-            A2($Random.$float,0,1),
-            seed),
-            chance = $._0,
-            seed$ = $._1;
-            return _U.cmp(p,
-            chance) < 0 ? {ctor: "_Tuple2"
-                          ,_0: $Maybe.Nothing
-                          ,_1: seed$} : function () {
-               var $ = A2($Random.generate,
-               g,
-               seed$),
-               x = $._0,
-               seed$$ = $._1;
-               return {ctor: "_Tuple2"
-                      ,_0: $Maybe.Just(x)
-                      ,_1: seed$$};
-            }();
-         }();
-      });
-   });
    var randomThen = F3(function (m,
    f,
    seed) {
@@ -8183,6 +8256,21 @@ Elm.Utils.make = function (_elm) {
              ,_0: x
              ,_1: seed};
    });
+   var withProbability = F2(function (p,
+   g) {
+      return $Random.customGenerator(A2(randomThen,
+      $Random.generate(A2($Random.$float,
+      0,
+      1)),
+      function (chance) {
+         return _U.cmp(p,
+         chance) < 0 ? randomReturn($Maybe.Nothing) : A2(randomThen,
+         $Random.generate(g),
+         function (x) {
+            return randomReturn($Maybe.Just(x));
+         });
+      }));
+   });
    var normalizeAngle = function (angle) {
       return _U.cmp(angle,
       $Basics.pi) > 0 ? angle - 2 * $Basics.pi : _U.cmp(angle,
@@ -8193,7 +8281,11 @@ Elm.Utils.make = function (_elm) {
    newMin,
    newMax,
    x) {
-      return (newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin;
+      return A2($Basics.clamp,
+      A2($Basics.min,newMin,newMax),
+      A2($Basics.max,
+      newMin,
+      newMax))((newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin);
    });
    var maybeToList = function (maybe) {
       return function () {
@@ -8215,20 +8307,13 @@ Elm.Utils.make = function (_elm) {
       }();
    };
    var randomElement = function (arr) {
-      return $Random.customGenerator(function (seed) {
-         return function () {
-            var $ = A2($Random.generate,
-            $Random.$int(0)($Array.length(arr) - 1),
-            seed),
-            index = $._0,
-            seed$ = $._1;
-            return {ctor: "_Tuple2"
-                   ,_0: fromJust(A2($Array.get,
-                   index,
-                   arr))
-                   ,_1: seed};
-         }();
-      });
+      return $Random.customGenerator(A2(randomThen,
+      $Random.generate($Random.$int(0)($Array.length(arr) - 1)),
+      function (index) {
+         return randomReturn(fromJust(A2($Array.get,
+         index,
+         arr)));
+      }));
    };
    var readSignal = $Native$MyUtils.readSignal;
    _elm.Utils.values = {_op: _op
