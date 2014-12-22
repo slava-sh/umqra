@@ -1965,6 +1965,16 @@ Elm.Main.make = function (_elm) {
       return v;
    },
    "Eat \'Em All");
+   var setScore = F2(function (score,
+   player) {
+      return _U.replace([["score"
+                         ,score]
+                        ,["maxScore"
+                         ,A2($Basics.max,
+                         player.maxScore,
+                         score)]],
+      player);
+   });
    var setState = F2(function (newState,
    obj) {
       return _U.replace([["state"
@@ -1999,7 +2009,7 @@ Elm.Main.make = function (_elm) {
                  }();
                case "Nothing": return _v0;}
             _U.badCase($moduleName,
-            "between lines 415 and 422");
+            "between lines 418 and 425");
          }();
       }();
    });
@@ -2018,7 +2028,7 @@ Elm.Main.make = function (_elm) {
             case "[]":
             return $Maybe.Nothing;}
          _U.badCase($moduleName,
-         "between lines 215 and 223");
+         "between lines 218 and 226");
       }());
    };
    var Manual = function (a) {
@@ -2196,7 +2206,7 @@ Elm.Main.make = function (_elm) {
                case "Emerging":
                return dotYoungRadius;}
             _U.badCase($moduleName,
-            "between lines 433 and 438");
+            "between lines 436 and 441");
          }();
          var angle$ = dot.angle + dot.dAngle * dt;
          var $ = $Basics.fromPolar({ctor: "_Tuple2"
@@ -2249,7 +2259,7 @@ Elm.Main.make = function (_elm) {
             case "Emerging":
             return dotMinScore;}
          _U.badCase($moduleName,
-         "between lines 550 and 554");
+         "between lines 560 and 564");
       }();
    };
    var eatDots = function (_v15) {
@@ -2269,12 +2279,8 @@ Elm.Main.make = function (_elm) {
             var score$ = _v15.player.score + $List.sum(A2($List.map,
             scoreDot,
             eatenDots));
-            var maxScore$ = A2($Basics.max,
-            _v15.player.maxScore,
-            score$);
-            var player$ = _U.replace([["score"
-                                      ,score$]
-                                     ,["maxScore",maxScore$]],
+            var player$ = A2(setScore,
+            score$,
             _v15.player);
             return _U.replace([["player"
                                ,player$]
@@ -2283,6 +2289,7 @@ Elm.Main.make = function (_elm) {
          }();
       }();
    };
+   var deadEnemyScore = 5;
    var enemyBouncePeriod = 1 * $Time.second;
    var enemyMaxRadius = 5.5;
    var enemyMinRadius = 5;
@@ -2366,7 +2373,7 @@ Elm.Main.make = function (_elm) {
                           target.time);
                         case "Moving": return 1;}
                      _U.badCase($moduleName,
-                     "between lines 615 and 618");
+                     "between lines 625 and 628");
                   }();
                   return $Graphics$Collage.move({ctor: "_Tuple2"
                                                 ,_0: target.x
@@ -2456,7 +2463,7 @@ Elm.Main.make = function (_elm) {
                        1,
                        dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));}
                   _U.badCase($moduleName,
-                  "between lines 581 and 590");
+                  "between lines 591 and 600");
                }());
             };
             var text = function (s) {
@@ -2548,7 +2555,7 @@ Elm.Main.make = function (_elm) {
                                                                        0,
                                                                        1)(_v17.game.time - _v29._0) : 1)(text(_v29._2))) : $Maybe.Nothing;}
                                                                   _U.badCase($moduleName,
-                                                                  "between lines 661 and 671");
+                                                                  "between lines 671 and 681");
                                                                }();
                                                             };
                                                             return $Maybe.withDefault($Graphics$Element.empty)($Maybe.oneOf($List.map(timedText)(_L.fromArray([{ctor: "_Tuple3"
@@ -2633,7 +2640,7 @@ Elm.Main.make = function (_elm) {
                                  ,h: $Basics.toFloat(_v34._1)
                                  ,w: $Basics.toFloat(_v34._0)};}
          _U.badCase($moduleName,
-         "between lines 238 and 241");
+         "between lines 241 and 244");
       }();
    }($Utils.readSignal($Window.dimensions));
    var cameraFrameSize = 100;
@@ -2667,7 +2674,7 @@ Elm.Main.make = function (_elm) {
                                         ,target.y - _v38.camera.y + camera$.y]],
                        target);}
                   _U.badCase($moduleName,
-                  "between lines 343 and 349");
+                  "between lines 346 and 352");
                }();
             })(target);
             var game$ = _U.replace([["target"
@@ -2720,7 +2727,7 @@ Elm.Main.make = function (_elm) {
                   case "Nothing":
                   return _v43.player.angle + _v43.player.dAngle * dt;}
                _U.badCase($moduleName,
-               "between lines 465 and 473");
+               "between lines 468 and 476");
             }();
             var velocity$ = A2($Basics.clamp,
             playerMinVelocity,
@@ -2799,20 +2806,6 @@ Elm.Main.make = function (_elm) {
                   a.radius + b.radius - coverRadiusToEat) < 0 && !_U.eq(a,
                   b);
                });
-               var enemies$ = $List.map(function ($) {
-                  return A2(updateEnemy,
-                  dt,
-                  _v50)(updateTime(dt)($));
-               })(_v50.enemies);
-               var $ = A2($List.partition,
-               function (e) {
-                  return A2($List.any,
-                  collide(e),
-                  enemies$);
-               },
-               enemies$),
-               newDeadEnemies = $._0,
-               enemies$$ = $._1;
                var halfH = _v49.h / 2;
                var halfW = _v49.w / 2;
                var isVisible = function (_v53) {
@@ -2822,14 +2815,34 @@ Elm.Main.make = function (_elm) {
                      halfH) < 0;
                   }();
                };
-               var deadEnemies$ = $List.filter(isVisible)(A2($Basics._op["++"],
+               var enemies$ = $List.map(function ($) {
+                  return A2(updateEnemy,
+                  dt,
+                  _v50)(updateTime(dt)($));
+               })($List.filter(isVisible)(_v50.enemies));
+               var $ = A2($List.partition,
+               function (e) {
+                  return A2($List.any,
+                  collide(e),
+                  enemies$);
+               },
+               enemies$),
+               newDeadEnemies = $._0,
+               enemies$$ = $._1;
+               var player$ = A2(setScore,
+               _v50.player.score + deadEnemyScore * $List.length(newDeadEnemies),
+               _v50.player);
+               var deadEnemies$ = A2($Basics._op["++"],
                newDeadEnemies,
+               A2($List.filter,
+               isVisible,
                _v50.deadEnemies));
                var h = $Basics.floor(_v49.h);
                var w = $Basics.floor(_v49.w);
                return _U.replace([["enemies"
                                   ,enemies$$]
-                                 ,["deadEnemies",deadEnemies$]],
+                                 ,["deadEnemies",deadEnemies$]
+                                 ,["player",player$]],
                _v50);
             }();
          }();
@@ -2861,9 +2874,9 @@ Elm.Main.make = function (_elm) {
                     }();
                   case "Delay":
                   return function () {
-                       var game$ = eatDots(eatPlayer(updateTarget(update._0)(A2(updateEnemies,
+                       var game$ = eatDots(eatPlayer(A2(updateEnemies,
                        update._0,
-                       _v55)(updatePlayer(update._0)(updateDots(update._0)(updateTime(update._0)(_v55.game)))))));
+                       _v55)(updateTarget(update._0)(updatePlayer(update._0)(updateDots(update._0)(updateTime(update._0)(_v55.game)))))));
                        return _U.replace([["game"
                                           ,game$]],
                        _v55);
@@ -3043,6 +3056,7 @@ Elm.Main.make = function (_elm) {
                       ,enemyMinRadius: enemyMinRadius
                       ,enemyMaxRadius: enemyMaxRadius
                       ,enemyBouncePeriod: enemyBouncePeriod
+                      ,deadEnemyScore: deadEnemyScore
                       ,dotMinScore: dotMinScore
                       ,dotMaxScore: dotMaxScore
                       ,dotYoungRadius: dotYoungRadius
@@ -3093,6 +3107,7 @@ Elm.Main.make = function (_elm) {
                       ,updateEnemies: updateEnemies
                       ,updateEnemy: updateEnemy
                       ,eatPlayer: eatPlayer
+                      ,setScore: setScore
                       ,eatDots: eatDots
                       ,scoreDot: scoreDot
                       ,updateTrail: updateTrail
