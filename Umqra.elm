@@ -106,7 +106,7 @@ dotColors = Array.fromList
 
 type alias Game =
   { player  : Player
-  , targets : List Target
+  , target  : Maybe Target
   , dots    : List Dot
   , seed    : Random.Seed
   , time    : Time
@@ -116,7 +116,10 @@ type alias Object a = { a | x : Float, y : Float }
 
 type alias Point = Object {}
 
-type alias Target = Object { time : Time }
+type alias Target = Object
+  { isActive : Bool
+  , time : Time
+  }
 
 type alias Player = Object
   { velocity  : Float
@@ -145,23 +148,33 @@ type alias Dot = Object
 type DotState = Emerging | Ageing | Dying
 
 type Update
-  = Input { x : Int, y : Int }
-  | Targets (List Touch)
+  = Input Steering
   | Window (Int, Int)
   | NewDot
   | Age
   | Delay Time
 
+type Steering = Manual { x : Int, y : Int } | Automatic (Maybe Point)
+
 updates : Signal Update
 updates = mergeMany
-  [ Input         <~ Keyboard.arrows
-  , Targets       <~ Touch.touches
+  [ Input         <~ merge (handleTouches <~ Touch.touches)
+                           (handleArrows  <~ Keyboard.arrows)
   , Window        <~ Window.dimensions
   -- A new dot appears with the probability 1/2
   , always NewDot <~ every (second / newDotsExpectedPS / 2)
   , always Age    <~ every (second / agePS)
   , Delay         <~ fps gameFPS
   ]
+
+handleTouches : List Touch -> Steering
+handleTouches touches =
+  case touches of
+    ({ x, y } :: _) -> Automatic <| Just { x = toFloat x, y = toFloat y }
+    []              -> Automatic <| Nothing
+
+handleArrows : { x : Int, y : Int } -> Steering
+handleArrows = Manual
 
 type alias Camera = Object {}
 
@@ -187,6 +200,8 @@ defaultGame : Game
 defaultGame = readSignal currentTime |> \time ->
   { seed    = Random.initialSeed <| floor time
   , player  = defaultPlayer
+  , target  = Nothing
+  , time    = 0
   , dots    =
       [ { x        = 100
         , y        = 0
@@ -200,8 +215,6 @@ defaultGame = readSignal currentTime |> \time ->
         , radius   = 0
         }
       ]
-  , targets = []
-  , time    = 0
   }
 
 defaultPlayer : Player
@@ -254,46 +267,52 @@ updateScene update scene =
 
 updateCamera : Scene -> Scene
 updateCamera ({ game, camera } as scene) =
-  let { player, targets } = game
+  let { player, target } = game
       halfFrame = cameraFrameSize / 2
       camera' =
         { camera
         | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
         , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
         }
-      targets' = targets
-                  |> List.map (\({x, y} as target) ->
-                       { target
-                       | x <- x - camera.x + camera'.x
-                       , y <- y - camera.y + camera'.y
-                       })
-      game' = { game | targets <- targets' }
+      target' = target |> Maybe.map (\target -> if
+                  | target.isActive ->
+                      { target
+                      | x <- target.x - camera.x + camera'.x
+                      , y <- target.y - camera.y + camera'.y
+                      }
+                  | otherwise -> target)
+      game' = { game | target <- target' }
   in { scene | camera <- camera', game <- game' }
 
 updateGame : Update -> Scene -> Scene
 updateGame update ({ game, camera } as scene) =
-  let { player, dots, seed } = game
+  let { player, dots, target, seed } = game
   in case update of
-    Input direction ->
+    Input (Manual direction) ->
       let player'  = { player
                      | dVelocity <- if
                          | direction.y == -1 -> -playerdVelocity
                          | otherwise         ->  playerdVelocity
                      , dAngle    <- toFloat direction.x * -playerdAngle
                      }
-          game' = { game | player <- player' }
+          target' = Nothing
+          game' = { game | player <- player', target <- target' }
       in { scene | game <- game' }
-    Targets touches ->
+    Input (Automatic Nothing) ->
+      let target' = target
+                    |> Maybe.map (\target -> { target | isActive <- False })
+          game' = { game | target <- target' }
+      in { scene | game <- game' }
+    Input (Automatic (Just { x, y })) ->
       let halfW = scene.w / 2
           halfH = scene.h / 2
-          targets' = touches
-                     |> List.map (\{ x, y } ->
-                          { x    = toFloat x - halfW + camera.x
-                          , y    = halfH - toFloat y + camera.y
-                          , time = 0
-                          })
+          target' = Just { x        = x - halfW + camera.x
+                         , y        = halfH - y + camera.y
+                         , isActive = True
+                         , time     = 0
+                         }
           player'  = { player | dVelocity <- playerdVelocity }
-          game' = { game | targets <- targets', player <- player' }
+          game' = { game | target <- target', player <- player' }
       in { scene | game <- game' }
     NewDot ->
       let (newDot, seed') = seed |> Random.generate
@@ -310,7 +329,7 @@ updateGame update ({ game, camera } as scene) =
     Delay dt ->
       let game' = game
                   |> updateTime dt
-                  |> updateTargets dt
+                  |> updateTarget dt
                   |> updateDots dt
                   |> updatePlayer dt
                   |> eatDots
@@ -320,9 +339,9 @@ updateGame update ({ game, camera } as scene) =
 updateTime : Time -> { obj | time : Time } -> { obj | time : Time }
 updateTime dt obj = { obj | time <- obj.time + dt }
 
-updateTargets : Time -> Game -> Game
-updateTargets dt game =
-  { game | targets <- List.map (updateTime dt) game.targets }
+updateTarget : Time -> Game -> Game
+updateTarget dt game =
+  { game | target <- Maybe.map (updateTime dt) game.target }
 
 setState : a
         -> { obj | state : a, time : Time }
@@ -364,18 +383,17 @@ updateDots dt ({ dots } as game) =
   in { game | dots <- dots' }
 
 updatePlayer : Time -> Game -> Game
-updatePlayer dt ({ player, targets } as game) =
+updatePlayer dt ({ player } as game) =
   let velocity' = player.velocity + player.dVelocity * dt
                   |> clamp playerMinVelocity playerMaxVelocity
-      angle'    = if
-        | List.isEmpty targets -> player.angle + player.dAngle * dt
-        | otherwise            ->
-            let target      = List.head targets
-                targetAngle = atan2 (target.y - player.y) (target.x - player.x)
-                deltaAngle  = targetAngle - player.angle
-                              |> normalizeAngle
-                              |> clamp (-playerdAngle * dt) (playerdAngle * dt)
-            in player.angle + deltaAngle
+      angle'    = case game.target of
+        Nothing     -> player.angle + player.dAngle * dt
+        Just target ->
+          let targetAngle = atan2 (target.y - player.y) (target.x - player.x)
+              deltaAngle  = targetAngle - player.angle
+                            |> normalizeAngle
+                            |> clamp (-playerdAngle * dt) (playerdAngle * dt)
+          in player.angle + deltaAngle
       (dx, dy)  = fromPolar (velocity', angle')
       player'   = { player
                   | x        <- player.x + dx * dt
@@ -412,14 +430,15 @@ updateTrail : Player -> Player
 updateTrail ({ trail } as player) =
   let trail' = if
         | List.isEmpty trail -> [{ x = player.x, y = player.y }]
-        | distance player (List.head trail) > player.velocity * second / trailsPS ->
-            List.take trailLength <| { x = player.x, y = player.y } :: trail
+        | distance player (List.head trail) >
+            player.velocity * second / trailsPS ->
+              List.take trailLength <| { x = player.x, y = player.y } :: trail
         | otherwise -> trail
   in { player | trail <- trail' }
 
 display : Scene -> Element
 display ({ game, camera } as scene) =
-  let { player, dots, targets } = game
+  let { player, dots } = game
       w = floor scene.w
       h = floor scene.h
       halfW = scene.w / 2
@@ -462,7 +481,7 @@ display ({ game, camera } as scene) =
           List.indexedMap trailForm player.trail ++
           List.map dotForm (List.filter isVisible dots) ++
           [playerForm] ++
-          List.map targetForm targets
+          List.map targetForm (maybeToList game.target)
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           "Age: " ++ toString player.age
       , container w h (midTopAt (relative 0.5) (absolute 10))  <|
