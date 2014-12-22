@@ -106,19 +106,17 @@ dotColors = Array.fromList
 
 type alias Game =
   { player  : Player
-  , targets : List Point
+  , targets : List Target
   , dots    : List Dot
   , seed    : Random.Seed
   , time    : Time
   }
 
-type alias Object a =
-  { a
-  | x : Float
-  , y : Float
-  }
+type alias Object a = { a | x : Float, y : Float }
 
 type alias Point = Object {}
+
+type alias Target = Object { time : Time }
 
 type alias Player = Object
   { velocity  : Float
@@ -263,9 +261,12 @@ updateCamera ({ game, camera } as scene) =
         | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
         , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
         }
-      targets' = targets |> List.map (\{x, y} -> { x = x - camera.x + camera'.x
-                                                 , y = y - camera.y + camera'.y
-                                                 })
+      targets' = targets
+                  |> List.map (\({x, y} as target) ->
+                       { target
+                       | x <- x - camera.x + camera'.x
+                       , y <- y - camera.y + camera'.y
+                       })
       game' = { game | targets <- targets' }
   in { scene | camera <- camera', game <- game' }
 
@@ -282,13 +283,14 @@ updateGame update ({ game, camera } as scene) =
                      }
           game' = { game | player <- player' }
       in { scene | game <- game' }
-    Targets targets ->
+    Targets touches ->
       let halfW = scene.w / 2
           halfH = scene.h / 2
-          targets' = targets
+          targets' = touches
                      |> List.map (\{ x, y } ->
-                          { x = toFloat x - halfW + camera.x
-                          , y = halfH - toFloat y + camera.y
+                          { x    = toFloat x - halfW + camera.x
+                          , y    = halfH - toFloat y + camera.y
+                          , time = 0
                           })
           player'  = { player | dVelocity <- playerdVelocity }
           game' = { game | targets <- targets', player <- player' }
@@ -307,12 +309,20 @@ updateGame update ({ game, camera } as scene) =
       in { scene | game <- game' }
     Delay dt ->
       let game' = game
-                  |> \game -> { game | time <- game.time + dt }
+                  |> updateTime dt
+                  |> updateTargets dt
                   |> updateDots dt
                   |> updatePlayer dt
                   |> eatDots
       in { scene | game <- game' }
     _ -> scene
+
+updateTime : Time -> { obj | time : Time } -> { obj | time : Time }
+updateTime dt obj = { obj | time <- obj.time + dt }
+
+updateTargets : Time -> Game -> Game
+updateTargets dt game =
+  { game | targets <- List.map (updateTime dt) game.targets }
 
 setState : a
         -> { obj | state : a, time : Time }
@@ -322,19 +332,17 @@ setState newState obj = { obj | state <- newState, time <- 0 }
 updateDot : Time -> Dot -> Dot
 updateDot dt dot =
   let (dx, dy) = fromPolar (dot.velocity, dot.angle)
-      time'    = dot.time + dt
       x'       = dot.x + dx * dt
       y'       = dot.y + dy * dt
       angle'   = dot.angle + dot.dAngle * dt
       radius'  = case dot.state of
         Emerging -> dotYoungRadius
         Ageing   -> linearScale 0 dot.lifetime
-                                dotYoungRadius dotMatureRadius time'
+                                dotYoungRadius dotMatureRadius dot.time
         Dying    -> dotMatureRadius
   in
     { dot
-    | time   <- time'
-    , x      <- x'
+    | x      <- x'
     , y      <- y'
     , angle  <- angle'
     , radius <- radius'
@@ -350,7 +358,7 @@ updateDotState dot = if
 updateDots : Time -> Game -> Game
 updateDots dt ({ dots } as game) =
   let dots' = dots
-              |> List.map (updateDot dt)
+              |> List.map (updateDot dt << updateTime dt)
               |> List.filter (\dot -> not (dot.state == Dying
                                         && dot.time > dotDyingTime))
   in { game | dots <- dots' }
@@ -439,16 +447,22 @@ display ({ game, camera } as scene) =
         |> filled Color.white
         |> alpha (scaleTrail 1 0 <| toFloat i)
         |> move (dot.x, dot.y)
+      targetForm target =
+        circle playerMinRadius
+        |> filled Color.white
+        |> move (target.x, target.y)
+      playerForm =
+        circle player.radius
+        |> filled Color.white
+        |> move (player.x, player.y)
   in
     layers
       [ spacer w h |> color Color.black
       , collage w h <| List.map (move (-camera.x, -camera.y)) <|
           List.indexedMap trailForm player.trail ++
           List.map dotForm (List.filter isVisible dots) ++
-          [ circle player.radius
-            |> filled Color.white
-            |> move (player.x, player.y)
-          ]
+          [playerForm] ++
+          List.map targetForm targets
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           "Age: " ++ toString player.age
       , container w h (midTopAt (relative 0.5) (absolute 10))  <|
