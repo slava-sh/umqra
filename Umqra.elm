@@ -164,7 +164,7 @@ type Update
 
 type Steering
   = Manual { velocity : Int, angle : Int }
-  | Automatic (Maybe Point)
+  | Automatic (Maybe { x : Int, y : Int, velocity : Int })
 
 updates : Signal Update
 updates = mergeMany
@@ -180,8 +180,14 @@ updates = mergeMany
 handleTouches : List Touch -> Steering
 handleTouches touches = Automatic <|
   case touches of
-    ({ x, y } :: _) -> Just { x = toFloat x, y = toFloat y }
-    []              -> Nothing
+    ({ x, y } :: rest) -> Just
+      { x = x
+      , y = y
+      , velocity = if
+          | List.isEmpty rest ->  1
+          | otherwise         -> -1
+      }
+    [] -> Nothing
 
 handleArrows : { x : Int, y : Int } -> Steering
 handleArrows { x, y } = Manual
@@ -306,15 +312,15 @@ updateGame update ({ game, camera } as scene) =
       let target' = Maybe.map (setState Fixed) target
           game' = { game | target <- target' }
       in { scene | game <- game' }
-    Input (Automatic (Just { x, y })) ->
+    Input (Automatic (Just { x, y, velocity })) ->
       let halfW = scene.w / 2
           halfH = scene.h / 2
-          target' = Just { x     = x - halfW + camera.x
-                         , y     = halfH - y + camera.y
+          target' = Just { x     = toFloat x - halfW + camera.x
+                         , y     = halfH - toFloat y + camera.y
                          , state = Moving
                          , time  = 0
                          }
-          player'  = { player | dVelocity <- playerdVelocity }
+          player' = { player | dVelocity <- toFloat velocity * playerdVelocity }
           game' = { game | target <- target', player <- player' }
       in { scene | game <- game' }
     NewDot ->
