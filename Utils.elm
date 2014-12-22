@@ -24,6 +24,7 @@ maybeToList maybe = case maybe of
 linearScale : Float -> Float -> Float -> Float -> Float -> Float
 linearScale oldMin oldMax newMin newMax x =
   (newMax - newMin) / (oldMax - oldMin) * (x - oldMin) + newMin
+  |> clamp (min newMin newMax) (max newMin newMax)
 
 normalizeAngle : Float -> Float
 normalizeAngle angle = if

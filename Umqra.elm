@@ -58,6 +58,9 @@ playerMaxRadius = 5
 playerBouncePeriod : Time
 playerBouncePeriod = 1 * second
 
+dotMinScore : Score
+dotMinScore = 1
+
 dotMaxScore : Score
 dotMaxScore = 10
 
@@ -191,7 +194,7 @@ defaultGame = readSignal currentTime |> \time ->
         , y        = 0
         , color    = Color.green
         , time     = 0
-        , lifetime = 10 * second
+        , lifetime = 50 * second
         , state    = Emerging
         , velocity = dotMaxVelocity
         , angle    = 0
@@ -383,7 +386,7 @@ distance a b = sqrt <| (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2
 
 eatDots : Game -> Game
 eatDots ({ player, dots } as game) =
-  let playerEats dot = dot.state /= Dying &&
+  let playerEats dot =
         distance player dot < player.radius + dot.radius - coverRadiusToEat
       (eatenDots, dots') = List.partition playerEats dots
       score' = player.score + List.sum (List.map scoreDot eatenDots)
@@ -391,8 +394,11 @@ eatDots ({ player, dots } as game) =
   in { game | player <- player', dots <- dots' }
 
 scoreDot : Dot -> Score
-scoreDot dot = round <| linearScale 0 dot.lifetime
-                                    0 (toFloat dotMaxScore) dot.time
+scoreDot dot = case dot.state of
+  Emerging -> dotMinScore
+  Ageing   -> round <| linearScale 0 dot.lifetime
+                         (toFloat dotMinScore) (toFloat dotMaxScore) dot.time
+  Dying    -> dotMaxScore
 
 updateTrail : Player -> Player
 updateTrail ({ trail } as player) =
