@@ -104,22 +104,20 @@ dotColors = Array.fromList
   , Color.lightBlue
   ]
 
-type alias Game =
+type alias Object a = { a | x : Float, y : Float }
+
+type alias Timed a = { a | time : Time }
+
+type alias Game = Timed
   { player  : Player
   , target  : Maybe Target
   , dots    : List Dot
   , seed    : Random.Seed
-  , time    : Time
   }
-
-type alias Object a = { a | x : Float, y : Float }
 
 type alias Point = Object {}
 
-type alias Target = Object
-  { isActive : Bool
-  , time : Time
-  }
+type alias Target = Timed (Object { isActive : Bool })
 
 type alias Player = Object
   { velocity  : Float
@@ -134,16 +132,15 @@ type alias Player = Object
 
 type alias Score = Int
 
-type alias Dot = Object
+type alias Dot = Timed (Object
   { color    : Color
   , state    : DotState
-  , time     : Time
   , lifetime : Time
   , velocity : Float
   , angle    : Float
   , dAngle   : Float
   , radius   : Float
-  }
+  })
 
 type DotState = Emerging | Ageing | Dying
 
@@ -336,7 +333,7 @@ updateGame update ({ game, camera } as scene) =
       in { scene | game <- game' }
     _ -> scene
 
-updateTime : Time -> { obj | time : Time } -> { obj | time : Time }
+updateTime : Time -> Timed a -> Timed a
 updateTime dt obj = { obj | time <- obj.time + dt }
 
 updateTarget : Time -> Game -> Game
@@ -349,9 +346,7 @@ updateTarget dt ({ player } as game) = case game.target of
           | otherwise                      -> Just <| updateTime dt target
     in { game | target <- target' }
 
-setState : a
-        -> { obj | state : a, time : Time }
-        -> { obj | state : a, time : Time }
+setState : a -> Timed { obj | state : a } -> Timed { obj | state : a }
 setState newState obj = { obj | state <- newState, time <- 0 }
 
 updateDot : Time -> Dot -> Dot
