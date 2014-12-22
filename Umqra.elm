@@ -144,6 +144,15 @@ type alias Dot = Timed (Object
 
 type DotState = Emerging | Ageing | Dying
 
+type alias Camera = Object {}
+
+type alias Scene =
+  { game   : Game
+  , camera : Camera
+  , w      : Float
+  , h      : Float
+  }
+
 type Update
   = Input Steering
   | Window (Int, Int)
@@ -151,12 +160,14 @@ type Update
   | Age
   | Delay Time
 
-type Steering = Manual { x : Int, y : Int } | Automatic (Maybe Point)
+type Steering
+  = Manual { velocity : Int, angle : Int }
+  | Automatic (Maybe Point)
 
 updates : Signal Update
 updates = mergeMany
   [ Input         <~ merge (handleTouches <~ Touch.touches)
-                           (handleArrows  <~ Keyboard.arrows)
+                           (dropRepeats <| handleArrows <~ Keyboard.arrows)
   , Window        <~ Window.dimensions
   -- A new dot appears with the probability 1/2
   , always NewDot <~ every (second / newDotsExpectedPS / 2)
@@ -165,21 +176,17 @@ updates = mergeMany
   ]
 
 handleTouches : List Touch -> Steering
-handleTouches touches =
+handleTouches touches = Automatic <|
   case touches of
-    ({ x, y } :: _) -> Automatic <| Just { x = toFloat x, y = toFloat y }
-    []              -> Automatic <| Nothing
+    ({ x, y } :: _) -> Just { x = toFloat x, y = toFloat y }
+    []              -> Nothing
 
 handleArrows : { x : Int, y : Int } -> Steering
-handleArrows = Manual
-
-type alias Camera = Object {}
-
-type alias Scene =
-  { game   : Game
-  , camera : Camera
-  , w      : Float
-  , h      : Float
+handleArrows { x, y } = Manual
+  { velocity = if
+      | y == -1   -> -1
+      | otherwise ->  1
+  , angle = -x
   }
 
 scene : Signal Scene
@@ -285,14 +292,12 @@ updateGame : Update -> Scene -> Scene
 updateGame update ({ game, camera } as scene) =
   let { player, dots, target, seed } = game
   in case update of
-    Input (Manual direction) ->
-      let player'  = { player
-                     | dVelocity <- if
-                         | direction.y == -1 -> -playerdVelocity
-                         | otherwise         ->  playerdVelocity
-                     , dAngle    <- toFloat direction.x * -playerdAngle
-                     }
-          target' = Nothing
+    Input (Manual { velocity, angle }) ->
+      let target' = Nothing
+          player' = { player
+                    | dVelocity <- toFloat velocity * playerdVelocity
+                    , dAngle    <- toFloat angle    * playerdAngle
+                    }
           game' = { game | player <- player', target <- target' }
       in { scene | game <- game' }
     Input (Automatic Nothing) ->
