@@ -12,6 +12,9 @@ import Native.MyUtils
 readSignal : Signal a -> a
 readSignal = Native.MyUtils.readSignal
 
+touchEnabled : Bool
+touchEnabled = Native.MyUtils.touchEnabled
+
 fromJust : Maybe a -> a
 fromJust maybe = case maybe of
   Just x -> x

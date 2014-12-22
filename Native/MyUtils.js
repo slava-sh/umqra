@@ -11,7 +11,10 @@ Elm.Native.MyUtils.make = function(localRuntime) {
         return signal.value;
     }
 
+    var touchEnabled = 'ontouchstart' in window;
+
     return localRuntime.Native.MyUtils.values = {
-        readSignal: readSignal
+        readSignal: readSignal,
+        touchEnabled: touchEnabled
     };
 };

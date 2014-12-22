@@ -518,7 +518,9 @@ display ({ game, camera } as scene) =
           in
             [ ( 0 * second,  5 * second, "Eat dots to score points")
             , ( 5 * second, 10 * second, "Smaller dots give you more points")
-            , (10 * second, 15 * second, "Hold &darr; to maneuver")
+            , (10 * second, 15 * second, if
+                | touchEnabled -> "Use two fingers to maneuver"
+                | otherwise    -> "Hold &darr; to maneuver")
             , (15 * second, 18 * second, "Enjoy!")
             ]
             |> List.map timedText
