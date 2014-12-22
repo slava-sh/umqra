@@ -445,12 +445,28 @@ display ({ game, camera } as scene) =
           ]
       , container w h (topLeftAt (absolute 10) (absolute 10))  <| text <|
           "Age: " ++ toString player.age
-      , container w h (midTopAt (relative 0.5) (absolute 10))  <| text <| if
-          | game.time <  5 * second -> "Eat dots to score points"
-          | game.time < 10 * second -> "Smaller dots give you more points"
-          | game.time < 15 * second -> "Hold &darr; to maneuver"
-          | game.time < 18 * second -> "Enjoy!"
-          | otherwise               -> ""
+      , container w h (midTopAt (relative 0.5) (absolute 10))  <|
+          let fadeTime = 1 / 4 * second
+              timedText (start, end, str) = if
+                | start < game.time && game.time < end ->
+                    text str
+                    |> opacity (if
+                         | game.time > end - fadeTime ->
+                             linearScale fadeTime 0 1 0 <| end - game.time
+                         | game.time < start + fadeTime ->
+                             linearScale 0 fadeTime 0 1 <| game.time - start
+                         | otherwise -> 1)
+                    |> Just
+                | otherwise -> Nothing
+          in
+            [ ( 0 * second,  5 * second, "Eat dots to score points")
+            , ( 5 * second, 10 * second, "Smaller dots give you more points")
+            , (10 * second, 15 * second, "Hold &darr; to maneuver")
+            , (15 * second, 18 * second, "Enjoy!")
+            ]
+            |> List.map timedText
+            |> Maybe.oneOf
+            |> Maybe.withDefault empty
       , container w h (topRightAt (absolute 10) (absolute 10)) <| text <|
           "Score: " ++ toString player.score
       ]
