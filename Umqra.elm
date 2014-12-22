@@ -329,9 +329,9 @@ updateGame update ({ game, camera } as scene) =
     Delay dt ->
       let game' = game
                   |> updateTime dt
-                  |> updateTarget dt
                   |> updateDots dt
                   |> updatePlayer dt
+                  |> updateTarget dt
                   |> eatDots
       in { scene | game <- game' }
     _ -> scene
@@ -340,8 +340,14 @@ updateTime : Time -> { obj | time : Time } -> { obj | time : Time }
 updateTime dt obj = { obj | time <- obj.time + dt }
 
 updateTarget : Time -> Game -> Game
-updateTarget dt game =
-  { game | target <- Maybe.map (updateTime dt) game.target }
+updateTarget dt ({ player } as game) = case game.target of
+  Nothing     -> game
+  Just target ->
+    let targetDistance = distance player target
+        target'        = if
+          | targetDistance < player.radius -> Nothing
+          | otherwise                      -> Just <| updateTime dt target
+    in { game | target <- target' }
 
 setState : a
         -> { obj | state : a, time : Time }
