@@ -117,7 +117,9 @@ type alias Game = Timed
 
 type alias Point = Object {}
 
-type alias Target = Timed (Object { isActive : Bool })
+type alias Target = Timed (Object { state : TargetState })
+
+type TargetState = Moving | Fixed
 
 type alias Player = Object
   { velocity  : Float
@@ -278,13 +280,13 @@ updateCamera ({ game, camera } as scene) =
         | x <- clamp (player.x - halfFrame) (player.x + halfFrame) camera.x
         , y <- clamp (player.y - halfFrame) (player.y + halfFrame) camera.y
         }
-      target' = target |> Maybe.map (\target -> if
-                  | target.isActive ->
-                      { target
-                      | x <- target.x - camera.x + camera'.x
-                      , y <- target.y - camera.y + camera'.y
-                      }
-                  | otherwise -> target)
+      target' = target |> Maybe.map (\target -> case target.state of
+        Moving ->
+          { target
+          | x <- target.x - camera.x + camera'.x
+          , y <- target.y - camera.y + camera'.y
+          }
+        Fixed -> target)
       game' = { game | target <- target' }
   in { scene | camera <- camera', game <- game' }
 
@@ -301,17 +303,16 @@ updateGame update ({ game, camera } as scene) =
           game' = { game | player <- player', target <- target' }
       in { scene | game <- game' }
     Input (Automatic Nothing) ->
-      let target' = target
-                    |> Maybe.map (\target -> { target | isActive <- False })
+      let target' = Maybe.map (setState Fixed) target
           game' = { game | target <- target' }
       in { scene | game <- game' }
     Input (Automatic (Just { x, y })) ->
       let halfW = scene.w / 2
           halfH = scene.h / 2
-          target' = Just { x        = x - halfW + camera.x
-                         , y        = halfH - y + camera.y
-                         , isActive = True
-                         , time     = 0
+          target' = Just { x     = x - halfW + camera.x
+                         , y     = halfH - y + camera.y
+                         , state = Moving
+                         , time  = 0
                          }
           player'  = { player | dVelocity <- playerdVelocity }
           game' = { game | target <- target', player <- player' }
@@ -473,9 +474,14 @@ display ({ game, camera } as scene) =
         |> alpha (scaleTrail 1 0 <| toFloat i)
         |> move (dot.x, dot.y)
       targetForm target =
-        circle playerMinRadius
-        |> filled Color.white
-        |> move (target.x, target.y)
+        let opacity = case target.state of
+              Fixed  -> linearScale 0 (0.25 * second) 1 0 target.time
+              Moving -> 1
+        in
+          circle playerMinRadius
+          |> filled Color.white
+          |> alpha opacity
+          |> move (target.x, target.y)
       playerForm =
         circle player.radius
         |> filled Color.white
