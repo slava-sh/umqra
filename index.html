@@ -2004,7 +2004,7 @@ Elm.Main.make = function (_elm) {
                  }();
                case "Nothing": return _v0;}
             _U.badCase($moduleName,
-            "between lines 345 and 352");
+            "between lines 346 and 353");
          }();
       }();
    });
@@ -2022,7 +2022,7 @@ Elm.Main.make = function (_elm) {
             case "[]":
             return $Maybe.Nothing;}
          _U.badCase($moduleName,
-         "between lines 180 and 182");
+         "between lines 182 and 184");
       }());
    };
    var Manual = function (a) {
@@ -2062,6 +2062,8 @@ Elm.Main.make = function (_elm) {
    var Dying = {ctor: "Dying"};
    var Ageing = {ctor: "Ageing"};
    var Emerging = {ctor: "Emerging"};
+   var Fixed = {ctor: "Fixed"};
+   var Moving = {ctor: "Moving"};
    var Timed = F2(function (a,b) {
       return _U.insert("time",a,b);
    });
@@ -2175,7 +2177,7 @@ Elm.Main.make = function (_elm) {
                case "Emerging":
                return dotYoungRadius;}
             _U.badCase($moduleName,
-            "between lines 363 and 368");
+            "between lines 364 and 369");
          }();
          var angle$ = dot.angle + dot.dAngle * dt;
          var $ = $Basics.fromPolar({ctor: "_Tuple2"
@@ -2228,7 +2230,7 @@ Elm.Main.make = function (_elm) {
             case "Emerging":
             return dotMinScore;}
          _U.badCase($moduleName,
-         "between lines 429 and 433");
+         "between lines 430 and 434");
       }();
    };
    var eatDots = function (_v13) {
@@ -2265,16 +2267,32 @@ Elm.Main.make = function (_elm) {
       return function () {
          return function () {
             var targetForm = function (target) {
-               return $Graphics$Collage.move({ctor: "_Tuple2"
-                                             ,_0: target.x
-                                             ,_1: target.y})($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(playerMinRadius)));
+               return function () {
+                  var opacity = function () {
+                     var _v17 = target.state;
+                     switch (_v17.ctor)
+                     {case "Fixed":
+                        return A5($Utils.linearScale,
+                          0,
+                          0.25 * $Time.second,
+                          1,
+                          0,
+                          target.time);
+                        case "Moving": return 1;}
+                     _U.badCase($moduleName,
+                     "between lines 477 and 480");
+                  }();
+                  return $Graphics$Collage.move({ctor: "_Tuple2"
+                                                ,_0: target.x
+                                                ,_1: target.y})($Graphics$Collage.alpha(opacity)($Graphics$Collage.filled($Color.white)($Graphics$Collage.circle(playerMinRadius))));
+               }();
             };
             var dotForm = function (dot) {
                return $Graphics$Collage.move({ctor: "_Tuple2"
                                              ,_0: dot.x
                                              ,_1: dot.y})(function () {
-                  var _v17 = dot.state;
-                  switch (_v17.ctor)
+                  var _v18 = dot.state;
+                  switch (_v18.ctor)
                   {case "Ageing":
                      return $Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius));
                      case "Dying":
@@ -2292,7 +2310,7 @@ Elm.Main.make = function (_elm) {
                        1,
                        dot.time))($Graphics$Collage.filled(dot.color)($Graphics$Collage.circle(dot.radius)));}
                   _U.badCase($moduleName,
-                  "between lines 460 and 469");
+                  "between lines 461 and 470");
                }());
             };
             var text = function (s) {
@@ -2301,10 +2319,10 @@ Elm.Main.make = function (_elm) {
             };
             var halfH = _v15.h / 2;
             var halfW = _v15.w / 2;
-            var isVisible = function (_v18) {
+            var isVisible = function (_v19) {
                return function () {
-                  return _U.cmp($Basics.abs(_v18.x - _v15.camera.x) - _v18.radius,
-                  halfW) < 0 && _U.cmp($Basics.abs(_v18.y - _v15.camera.y) - _v18.radius,
+                  return _U.cmp($Basics.abs(_v19.x - _v15.camera.x) - _v19.radius,
+                  halfW) < 0 && _U.cmp($Basics.abs(_v19.y - _v15.camera.y) - _v19.radius,
                   halfH) < 0;
                }();
             };
@@ -2364,25 +2382,25 @@ Elm.Main.make = function (_elm) {
                                                          $Graphics$Element.relative(0.5),
                                                          $Graphics$Element.absolute(10)))(function () {
                                                             var fadeTime = 1 / 4 * $Time.second;
-                                                            var timedText = function (_v20) {
+                                                            var timedText = function (_v21) {
                                                                return function () {
-                                                                  switch (_v20.ctor)
+                                                                  switch (_v21.ctor)
                                                                   {case "_Tuple3":
-                                                                     return _U.cmp(_v20._0,
+                                                                     return _U.cmp(_v21._0,
                                                                        _v15.game.time) < 0 && _U.cmp(_v15.game.time,
-                                                                       _v20._1) < 0 ? $Maybe.Just($Graphics$Element.opacity(_U.cmp(_v15.game.time,
-                                                                       _v20._1 - fadeTime) > 0 ? A4($Utils.linearScale,
+                                                                       _v21._1) < 0 ? $Maybe.Just($Graphics$Element.opacity(_U.cmp(_v15.game.time,
+                                                                       _v21._1 - fadeTime) > 0 ? A4($Utils.linearScale,
                                                                        fadeTime,
                                                                        0,
                                                                        1,
-                                                                       0)(_v20._1 - _v15.game.time) : _U.cmp(_v15.game.time,
-                                                                       _v20._0 + fadeTime) < 0 ? A4($Utils.linearScale,
+                                                                       0)(_v21._1 - _v15.game.time) : _U.cmp(_v15.game.time,
+                                                                       _v21._0 + fadeTime) < 0 ? A4($Utils.linearScale,
                                                                        0,
                                                                        fadeTime,
                                                                        0,
-                                                                       1)(_v15.game.time - _v20._0) : 1)(text(_v20._2))) : $Maybe.Nothing;}
+                                                                       1)(_v15.game.time - _v21._0) : 1)(text(_v21._2))) : $Maybe.Nothing;}
                                                                   _U.badCase($moduleName,
-                                                                  "between lines 495 and 505");
+                                                                  "between lines 501 and 511");
                                                                }();
                                                             };
                                                             return $Maybe.withDefault($Graphics$Element.empty)($Maybe.oneOf($List.map(timedText)(_L.fromArray([{ctor: "_Tuple3"
@@ -2447,107 +2465,115 @@ Elm.Main.make = function (_elm) {
              ,target: $Maybe.Nothing
              ,time: 0};
    }($Utils.readSignal($Utils.currentTime));
-   var defaultScene = function (_v25) {
+   var defaultScene = function (_v26) {
       return function () {
-         switch (_v25.ctor)
+         switch (_v26.ctor)
          {case "_Tuple2": return {_: {}
                                  ,camera: {_: {},x: 0,y: 0}
                                  ,game: defaultGame
-                                 ,h: $Basics.toFloat(_v25._1)
-                                 ,w: $Basics.toFloat(_v25._0)};}
+                                 ,h: $Basics.toFloat(_v26._1)
+                                 ,w: $Basics.toFloat(_v26._0)};}
          _U.badCase($moduleName,
-         "between lines 197 and 200");
+         "between lines 199 and 202");
       }();
    }($Utils.readSignal($Window.dimensions));
    var cameraFrameSize = 100;
-   var updateCamera = function (_v29) {
+   var updateCamera = function (_v30) {
       return function () {
          return function () {
             var halfFrame = cameraFrameSize / 2;
-            var $ = _v29.game,
+            var $ = _v30.game,
             player = $.player,
             target = $.target;
             var camera$ = _U.replace([["x"
                                       ,A3($Basics.clamp,
                                       player.x - halfFrame,
                                       player.x + halfFrame,
-                                      _v29.camera.x)]
+                                      _v30.camera.x)]
                                      ,["y"
                                       ,A3($Basics.clamp,
                                       player.y - halfFrame,
                                       player.y + halfFrame,
-                                      _v29.camera.y)]],
-            _v29.camera);
+                                      _v30.camera.y)]],
+            _v30.camera);
             var target$ = $Maybe.map(function (target) {
-               return target.isActive ? _U.replace([["x"
-                                                    ,target.x - _v29.camera.x + camera$.x]
-                                                   ,["y"
-                                                    ,target.y - _v29.camera.y + camera$.y]],
-               target) : target;
+               return function () {
+                  var _v32 = target.state;
+                  switch (_v32.ctor)
+                  {case "Fixed": return target;
+                     case "Moving":
+                     return _U.replace([["x"
+                                        ,target.x - _v30.camera.x + camera$.x]
+                                       ,["y"
+                                        ,target.y - _v30.camera.y + camera$.y]],
+                       target);}
+                  _U.badCase($moduleName,
+                  "between lines 283 and 289");
+               }();
             })(target);
             var game$ = _U.replace([["target"
                                     ,target$]],
-            _v29.game);
+            _v30.game);
             return _U.replace([["camera"
                                ,camera$]
                               ,["game",game$]],
-            _v29);
+            _v30);
          }();
       }();
    };
    var newDotsExpectedPS = 2;
    var trailLength = 15;
    var trailsPS = 10;
-   var updateTrail = function (_v31) {
+   var updateTrail = function (_v33) {
       return function () {
          return function () {
-            var trail$ = $List.isEmpty(_v31.trail) ? _L.fromArray([{_: {}
-                                                                   ,x: _v31.x
-                                                                   ,y: _v31.y}]) : _U.cmp(A2(distance,
-            _v31,
-            $List.head(_v31.trail)),
-            _v31.velocity * $Time.second / trailsPS) > 0 ? $List.take(trailLength)(A2($List._op["::"],
-            {_: {},x: _v31.x,y: _v31.y},
-            _v31.trail)) : _v31.trail;
+            var trail$ = $List.isEmpty(_v33.trail) ? _L.fromArray([{_: {}
+                                                                   ,x: _v33.x
+                                                                   ,y: _v33.y}]) : _U.cmp(A2(distance,
+            _v33,
+            $List.head(_v33.trail)),
+            _v33.velocity * $Time.second / trailsPS) > 0 ? $List.take(trailLength)(A2($List._op["::"],
+            {_: {},x: _v33.x,y: _v33.y},
+            _v33.trail)) : _v33.trail;
             return _U.replace([["trail"
                                ,trail$]],
-            _v31);
+            _v33);
          }();
       }();
    };
    var updatePlayer = F2(function (dt,
-   _v33) {
+   _v35) {
       return function () {
          return function () {
             var angle$ = function () {
-               var _v35 = _v33.target;
-               switch (_v35.ctor)
+               var _v37 = _v35.target;
+               switch (_v37.ctor)
                {case "Just":
                   return function () {
                        var targetAngle = A2($Basics.atan2,
-                       _v35._0.y - _v33.player.y,
-                       _v35._0.x - _v33.player.x);
+                       _v37._0.y - _v35.player.y,
+                       _v37._0.x - _v35.player.x);
                        var deltaAngle = A2($Basics.clamp,
                        (0 - playerdAngle) * dt,
-                       playerdAngle * dt)($Utils.normalizeAngle(targetAngle - _v33.player.angle));
-                       return _v33.player.angle + deltaAngle;
+                       playerdAngle * dt)($Utils.normalizeAngle(targetAngle - _v35.player.angle));
+                       return _v35.player.angle + deltaAngle;
                     }();
                   case "Nothing":
-                  return _v33.player.angle + _v33.player.dAngle * dt;}
+                  return _v35.player.angle + _v35.player.dAngle * dt;}
                _U.badCase($moduleName,
-               "between lines 395 and 403");
+               "between lines 396 and 404");
             }();
             var velocity$ = A2($Basics.clamp,
             playerMinVelocity,
-            playerMaxVelocity)(_v33.player.velocity + _v33.player.dVelocity * dt);
+            playerMaxVelocity)(_v35.player.velocity + _v35.player.dVelocity * dt);
             var $ = $Basics.fromPolar({ctor: "_Tuple2"
                                       ,_0: velocity$
                                       ,_1: angle$}),
             dx = $._0,
             dy = $._1;
             var player$ = updateTrail(_U.replace([["x"
-                                                  ,_v33.player.x + dx * dt]
-                                                 ,["y",_v33.player.y + dy * dt]
+                                                  ,_v35.player.x + dx * dt]
+                                                 ,["y",_v35.player.y + dy * dt]
                                                  ,["velocity",velocity$]
                                                  ,["angle",angle$]
                                                  ,["radius"
@@ -2555,19 +2581,19 @@ Elm.Main.make = function (_elm) {
                                                   1,
                                                   -1,
                                                   playerMinRadius,
-                                                  playerMaxRadius)($Basics.cos(2 * $Basics.pi / playerBouncePeriod * _v33.time))]],
-            _v33.player));
+                                                  playerMaxRadius)($Basics.cos(2 * $Basics.pi / playerBouncePeriod * _v35.time))]],
+            _v35.player));
             return _U.replace([["player"
                                ,player$]],
-            _v33);
+            _v35);
          }();
       }();
    });
    var updateGame = F2(function (update,
-   _v37) {
+   _v39) {
       return function () {
          return function () {
-            var $ = _v37.game,
+            var $ = _v39.game,
             player = $.player,
             dots = $.dots,
             target = $.target,
@@ -2581,17 +2607,17 @@ Elm.Main.make = function (_elm) {
                        player);
                        var game$ = _U.replace([["player"
                                                ,player$]],
-                       _v37.game);
+                       _v39.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v37);
+                       _v39);
                     }();
                   case "Delay":
                   return function () {
-                       var game$ = eatDots(updateTarget(update._0)(updatePlayer(update._0)(updateDots(update._0)(updateTime(update._0)(_v37.game)))));
+                       var game$ = eatDots(updateTarget(update._0)(updatePlayer(update._0)(updateDots(update._0)(updateTime(update._0)(_v39.game)))));
                        return _U.replace([["game"
                                           ,game$]],
-                       _v37);
+                       _v39);
                     }();
                   case "Input":
                   switch (update._0.ctor)
@@ -2602,34 +2628,32 @@ Elm.Main.make = function (_elm) {
                                  var player$ = _U.replace([["dVelocity"
                                                            ,playerdVelocity]],
                                  player);
-                                 var halfH = _v37.h / 2;
-                                 var halfW = _v37.w / 2;
+                                 var halfH = _v39.h / 2;
+                                 var halfW = _v39.w / 2;
                                  var target$ = $Maybe.Just({_: {}
-                                                           ,isActive: true
+                                                           ,state: Moving
                                                            ,time: 0
-                                                           ,x: update._0._0._0.x - halfW + _v37.camera.x
-                                                           ,y: halfH - update._0._0._0.y + _v37.camera.y});
+                                                           ,x: update._0._0._0.x - halfW + _v39.camera.x
+                                                           ,y: halfH - update._0._0._0.y + _v39.camera.y});
                                  var game$ = _U.replace([["target"
                                                          ,target$]
                                                         ,["player",player$]],
-                                 _v37.game);
+                                 _v39.game);
                                  return _U.replace([["game"
                                                     ,game$]],
-                                 _v37);
+                                 _v39);
                               }();
                             case "Nothing":
                             return function () {
-                                 var target$ = $Maybe.map(function (target) {
-                                    return _U.replace([["isActive"
-                                                       ,false]],
-                                    target);
-                                 })(target);
+                                 var target$ = A2($Maybe.map,
+                                 setState(Fixed),
+                                 target);
                                  var game$ = _U.replace([["target"
                                                          ,target$]],
-                                 _v37.game);
+                                 _v39.game);
                                  return _U.replace([["game"
                                                     ,game$]],
-                                 _v37);
+                                 _v39);
                               }();}
                          break;
                        case "Manual":
@@ -2643,10 +2667,10 @@ Elm.Main.make = function (_elm) {
                             var game$ = _U.replace([["player"
                                                     ,player$]
                                                    ,["target",target$]],
-                            _v37.game);
+                            _v39.game);
                             return _U.replace([["game"
                                                ,game$]],
-                            _v37);
+                            _v39);
                          }();}
                     break;
                   case "NewDot":
@@ -2654,10 +2678,10 @@ Elm.Main.make = function (_elm) {
                        var $ = $Random.generate(A2($Utils.withProbability,
                        0.5,
                        A4(randomDot,
-                       player.x - _v37.w,
-                       player.x + _v37.w,
-                       player.y - _v37.h,
-                       player.y + _v37.h)))(seed),
+                       player.x - _v39.w,
+                       player.x + _v39.w,
+                       player.y - _v39.h,
+                       player.y + _v39.h)))(seed),
                        newDot = $._0,
                        seed$ = $._1;
                        var dots$ = A2($Basics._op["++"],
@@ -2666,12 +2690,12 @@ Elm.Main.make = function (_elm) {
                        var game$ = _U.replace([["dots"
                                                ,dots$]
                                               ,["seed",seed$]],
-                       _v37.game);
+                       _v39.game);
                        return _U.replace([["game"
                                           ,game$]],
-                       _v37);
+                       _v39);
                     }();}
-               return _v37;
+               return _v39;
             }();
          }();
       }();
@@ -2753,6 +2777,8 @@ Elm.Main.make = function (_elm) {
                       ,dotColors: dotColors
                       ,Object: Object
                       ,Timed: Timed
+                      ,Moving: Moving
+                      ,Fixed: Fixed
                       ,Emerging: Emerging
                       ,Ageing: Ageing
                       ,Dying: Dying
